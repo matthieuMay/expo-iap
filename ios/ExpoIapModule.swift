@@ -147,7 +147,7 @@ func serializeSubscription(_ s: Product.SubscriptionInfo?) -> [String: Any?]? {
         "promotionalOffers": s.promotionalOffers.map(serializeOffer),
         "subscriptionGroupID": s.subscriptionGroupID,
         "subscriptionPeriod": [
-            "unit":getPeriodIos(s.subscriptionPeriod.unit),
+            "unit": getPeriodIos(s.subscriptionPeriod.unit),
             "value": s.subscriptionPeriod.value
         ],
     ]
