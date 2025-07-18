@@ -129,7 +129,7 @@ func serializeOffer(_ offer: Product.SubscriptionOffer?) -> [String: Any?]? {
     return [
         "id": offer.id,
         "period": [
-            "unit":getPeriodIos(offer.period.unit),
+            "unit": getPeriodIos(offer.period.unit),
             "value": offer.period.value
         ],
         "periodCount": offer.periodCount,
