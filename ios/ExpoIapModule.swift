@@ -121,7 +121,8 @@ func getPeriodIos(_ unit: Product.SubscriptionPeriod.Unit) -> String {
     case .week: "WEEK"
     case .month: "MONTH"
     case .year: "YEAR"
-    default: DEFAULT_SUBSCRIPTION_PERIOD_UNIT
+    @unknown default: 
+        fatalError("Unknown subscription period unit: \(unit)")
     }
 }
 
