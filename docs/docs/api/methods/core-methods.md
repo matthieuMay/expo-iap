@@ -122,24 +122,7 @@ const fetchProducts = async () => {
 
 **Returns:** `Promise<Product[]>`
 
-**Product Interface:**
-
-```tsx
-interface Product {
-  productId: string;
-  price: string;
-  currency: string;
-  localizedPrice: string;
-  title: string;
-  description: string;
-  type: 'inapp' | 'subs';
-  // Platform-specific fields
-  introductoryPrice?: string;
-  subscriptionPeriod?: string;
-  introductoryPricePeriod?: string;
-  freeTrialPeriod?: string;
-}
-```
+[**Product Interface**](../types.md#Product)
 
 ## getSubscriptions()
 

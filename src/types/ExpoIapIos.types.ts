@@ -30,7 +30,7 @@ export type ProductIos = ProductBase & {
   displayName: string;
   isFamilyShareable: boolean;
   jsonRepresentation: string;
-  subscription: SubscriptionInfo;
+  subscription?: SubscriptionInfo;
   introductoryPriceNumberOfPeriodsIOS?: string;
   introductoryPriceSubscriptionPeriodIOS?: SubscriptionIosPeriod;
 };
