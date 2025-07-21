@@ -113,13 +113,15 @@ func serializeTransaction(_ transaction: Transaction, jwsRepresentationIos: Stri
     return purchaseMap
 }
 
+private let DEFAULT_SUBSCRIPTION_PERIOD_UNIT = "DAY" // Default fallback unit for subscription periods.
+
 func getPeriodIos(_ unit: Product.SubscriptionPeriod.Unit) -> String {
     return switch (unit) {
     case .day: "DAY"
     case .week: "WEEK"
     case .month: "MONTH"
     case .year: "YEAR"
-    default: "DAY"
+    default: DEFAULT_SUBSCRIPTION_PERIOD_UNIT
     }
 }
 

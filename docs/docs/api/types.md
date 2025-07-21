@@ -24,7 +24,7 @@ interface Product {
 }
 ```
 
-Ios product contains additionnal informations: 
+iOS product contains additional information: 
 
 ```typescript
 type SubscriptionIosPeriod = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR' | '';
