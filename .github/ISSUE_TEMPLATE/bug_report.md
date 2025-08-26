@@ -23,6 +23,7 @@ assignees: ''
 **Environment:**
 
 - expo-iap:
+- Expo SDK: <!-- Optional: e.g., SDK 51, SDK 52 -->
 - react-native:
 - Platforms (iOS, Android, emulator, simulator, device):
 - Xcode version:
