@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2.8.2] - 2025-08-26
+
+### Added
+- Added `platform` field to all IAP types for improved runtime type discrimination
+- Consolidated `Purchase` types and deprecated legacy type aliases for consistency
+
+### Changed
+- Refactored and consolidated Purchase types to follow OpenIAP specification
+- Improved type consistency across iOS and Android platforms
+
+### Deprecated
+**Note**: The following deprecated type aliases will be removed in v2.9.0:
+- `ProductPurchase` (use `Purchase` instead)
+- `SubscriptionPurchase` (use `Purchase` instead)
+
 ## [2.8.1] - 2025-08-19
 
 ### Added
