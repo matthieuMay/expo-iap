@@ -14,7 +14,7 @@ import {signal, effect} from '@preact/signals-react';
 import {requestPurchase, useIAP, getAppTransactionIOS} from '../../src';
 import type {
   Product,
-  ProductPurchase,
+  Purchase,
   PurchaseError,
 } from '../../src/ExpoIap.types';
 
@@ -57,7 +57,7 @@ export default function PurchaseFlow() {
   
   // Use the useIAP hook for managing purchases
   const {connected, products, requestProducts, finishTransaction} = useIAP({
-    onPurchaseSuccess: async (purchase: ProductPurchase) => {
+    onPurchaseSuccess: async (purchase: Purchase) => {
       console.log('Purchase successful:', purchase);
       isProcessingSignal.value = false;
 

@@ -1,11 +1,11 @@
 import {
   ProductAndroid,
-  ProductPurchaseAndroid,
+  PurchaseAndroid,
   ProductSubscriptionAndroid,
 } from './types/ExpoIapAndroid.types';
 import {
   ProductIOS,
-  ProductPurchaseIOS,
+  PurchaseIOS,
   ProductSubscriptionIOS,
 } from './types/ExpoIapIOS.types';
 import {NATIVE_ERROR_CODES} from './ExpoIapModule';
@@ -63,29 +63,28 @@ export type SubscriptionProduct =
 
 // Re-export platform-specific types
 export type {
-  ProductPurchaseAndroid,
   PurchaseAndroid,
   ProductSubscriptionAndroid,
-  SubscriptionProductAndroid, // Legacy
 } from './types/ExpoIapAndroid.types';
 export type {
-  ProductPurchaseIOS,
   PurchaseIOS,
   ProductSubscriptionIOS,
-  SubscriptionProductIOS, // Legacy
 } from './types/ExpoIapIOS.types';
 
-// Union type for platform-specific purchase types
-export type ProductPurchase =
-  | (ProductPurchaseAndroid & AndroidPlatform)
-  | (ProductPurchaseIOS & IosPlatform);
+// Unified purchase type for both products and subscriptions
+export type Purchase =
+  | (PurchaseAndroid & AndroidPlatform)
+  | (PurchaseIOS & IosPlatform);
 
-// Union type for platform-specific subscription purchase types
-export type SubscriptionPurchase =
-  | (ProductPurchaseAndroid & AndroidPlatform & {autoRenewingAndroid: boolean})
-  | (ProductPurchaseIOS & IosPlatform);
-
-export type Purchase = ProductPurchase | SubscriptionPurchase;
+// Legacy type aliases - deprecated, use Purchase instead
+/**
+ * @deprecated Use `Purchase` instead. This type alias will be removed in v2.9.0.
+ */
+export type ProductPurchase = Purchase;
+/**
+ * @deprecated Use `Purchase` instead. This type alias will be removed in v2.9.0.
+ */
+export type SubscriptionPurchase = Purchase;
 
 export type PurchaseResult = {
   responseCode?: number;

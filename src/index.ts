@@ -18,16 +18,14 @@ import {
 // Types
 import {
   Product,
-  ProductPurchase,
   Purchase,
   PurchaseError,
   PurchaseResult,
   RequestSubscriptionProps,
   RequestPurchaseProps,
   SubscriptionProduct,
-  SubscriptionPurchase,
 } from './ExpoIap.types';
-import {ProductPurchaseAndroid} from './types/ExpoIapAndroid.types';
+import {PurchaseAndroid} from './types/ExpoIapAndroid.types';
 import {PaymentDiscount} from './types/ExpoIapIOS.types';
 
 // Export all types
@@ -281,7 +279,7 @@ export const getPurchaseHistory = ({
 }: {
   alsoPublishToEventListener?: boolean;
   onlyIncludeActiveItems?: boolean;
-} = {}): Promise<ProductPurchase[]> => {
+} = {}): Promise<Purchase[]> => {
   console.warn(
     '`getPurchaseHistory` is deprecated. Use `getPurchaseHistories` instead. This function will be removed in version 3.0.0.',
   );
@@ -297,7 +295,7 @@ export const getPurchaseHistories = ({
 }: {
   alsoPublishToEventListener?: boolean;
   onlyIncludeActiveItems?: boolean;
-} = {}): Promise<ProductPurchase[]> =>
+} = {}): Promise<Purchase[]> =>
   (
     Platform.select({
       ios: async () => {
@@ -323,7 +321,7 @@ export const getAvailablePurchases = ({
 }: {
   alsoPublishToEventListener?: boolean;
   onlyIncludeActiveItems?: boolean;
-} = {}): Promise<ProductPurchase[]> =>
+} = {}): Promise<Purchase[]> =>
   (
     Platform.select({
       ios: () =>
@@ -409,10 +407,8 @@ const normalizeRequestProps = (
 export const requestPurchase = (
   requestObj: PurchaseRequest,
 ): Promise<
-  | ProductPurchase
-  | SubscriptionPurchase
-  | ProductPurchase[]
-  | SubscriptionPurchase[]
+  | Purchase
+  | Purchase[]
   | void
 > => {
   const {request, type = 'inapp'} = requestObj;
@@ -445,8 +441,8 @@ export const requestPurchase = (
       );
 
       return type === 'inapp'
-        ? (purchase as ProductPurchase)
-        : (purchase as SubscriptionPurchase);
+        ? (purchase as Purchase)
+        : (purchase as Purchase);
     })();
   }
 
@@ -477,7 +473,7 @@ export const requestPurchase = (
           obfuscatedProfileId: obfuscatedProfileIdAndroid,
           offerTokenArr: [],
           isOfferPersonalized: isOfferPersonalized ?? false,
-        }) as Promise<ProductPurchase[]>;
+        }) as Promise<Purchase[]>;
       })();
     }
 
@@ -503,7 +499,7 @@ export const requestPurchase = (
           obfuscatedProfileId: obfuscatedProfileIdAndroid,
           offerTokenArr: subscriptionOffers.map((so: any) => so.offerToken),
           isOfferPersonalized: isOfferPersonalized ?? false,
-        }) as Promise<SubscriptionPurchase[]>;
+        }) as Promise<Purchase[]>;
       })();
     }
 
@@ -542,13 +538,13 @@ export const requestPurchase = (
  */
 export const requestSubscription = async (
   request: RequestSubscriptionProps,
-): Promise<SubscriptionPurchase | SubscriptionPurchase[] | null | void> => {
+): Promise<Purchase | Purchase[] | null | void> => {
   console.warn(
     "`requestSubscription` is deprecated and will be removed in version 3.0.0. Use `requestPurchase({ request, type: 'subs' })` instead.",
   );
   return (await requestPurchase({request, type: 'subs'})) as
-    | SubscriptionPurchase
-    | SubscriptionPurchase[]
+    | Purchase
+    | Purchase[]
     | null
     | void;
 };
@@ -573,7 +569,7 @@ export const finishTransaction = ({
         return Promise.resolve(true);
       },
       android: async () => {
-        const androidPurchase = purchase as ProductPurchaseAndroid;
+        const androidPurchase = purchase as PurchaseAndroid;
 
         if (isConsumable) {
           return ExpoIapModule.consumeProduct(androidPurchase.purchaseToken);

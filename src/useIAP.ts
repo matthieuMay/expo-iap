@@ -29,12 +29,10 @@ import {
 // Types
 import {
   Product,
-  ProductPurchase,
   Purchase,
   PurchaseError,
   PurchaseResult,
   SubscriptionProduct,
-  SubscriptionPurchase,
   RequestPurchaseProps,
   RequestSubscriptionProps,
 } from './ExpoIap.types';
@@ -42,12 +40,12 @@ import {
 type UseIap = {
   connected: boolean;
   products: Product[];
-  promotedProductsIOS: ProductPurchase[];
+  promotedProductsIOS: Purchase[];
   promotedProductIdIOS?: string;
   subscriptions: SubscriptionProduct[];
-  purchaseHistories: ProductPurchase[];
-  availablePurchases: ProductPurchase[];
-  currentPurchase?: ProductPurchase;
+  purchaseHistories: Purchase[];
+  availablePurchases: Purchase[];
+  currentPurchase?: Purchase;
   currentPurchaseError?: PurchaseError;
   promotedProductIOS?: Product;
   activeSubscriptions: ActiveSubscription[];
@@ -100,7 +98,7 @@ type UseIap = {
 
 export interface UseIAPOptions {
   onPurchaseSuccess?: (
-    purchase: ProductPurchase | SubscriptionPurchase,
+    purchase: Purchase,
   ) => void;
   onPurchaseError?: (error: PurchaseError) => void;
   onSyncError?: (error: Error) => void;
@@ -111,15 +109,15 @@ export interface UseIAPOptions {
 export function useIAP(options?: UseIAPOptions): UseIap {
   const [connected, setConnected] = useState<boolean>(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [promotedProductsIOS] = useState<ProductPurchase[]>([]);
+  const [promotedProductsIOS] = useState<Purchase[]>([]);
   const [subscriptions, setSubscriptions] = useState<SubscriptionProduct[]>([]);
-  const [purchaseHistories, setPurchaseHistories] = useState<ProductPurchase[]>(
+  const [purchaseHistories, setPurchaseHistories] = useState<Purchase[]>(
     [],
   );
   const [availablePurchases, setAvailablePurchases] = useState<
-    ProductPurchase[]
+    Purchase[]
   >([]);
-  const [currentPurchase, setCurrentPurchase] = useState<ProductPurchase>();
+  const [currentPurchase, setCurrentPurchase] = useState<Purchase>();
   const [promotedProductIOS, setPromotedProductIOS] = useState<Product>();
   const [currentPurchaseError, setCurrentPurchaseError] =
     useState<PurchaseError>();
@@ -289,7 +287,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
       purchase,
       isConsumable,
     }: {
-      purchase: ProductPurchase;
+      purchase: Purchase;
       isConsumable?: boolean;
     }): Promise<PurchaseResult | boolean> => {
       try {
@@ -382,7 +380,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
 
     if (result) {
       subscriptionsRef.current.purchaseUpdate = purchaseUpdatedListener(
-        async (purchase: Purchase | SubscriptionPurchase) => {
+        async (purchase: Purchase) => {
           setCurrentPurchaseError(undefined);
           setCurrentPurchase(purchase);
 

@@ -40,10 +40,16 @@ const modalVisibleSignal = signal(false);
 
 export default function SubscriptionFlow() {
   // React state synced with signals
-  const [purchaseResult, setPurchaseResult] = useState(purchaseResultSignal.value);
+  const [purchaseResult, setPurchaseResult] = useState(
+    purchaseResultSignal.value,
+  );
   const [isProcessing, setIsProcessing] = useState(isProcessingSignal.value);
-  const [isCheckingStatus, setIsCheckingStatus] = useState(isCheckingStatusSignal.value);
-  const [selectedSubscription, setSelectedSubscription] = useState(selectedSubscriptionSignal.value);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(
+    isCheckingStatusSignal.value,
+  );
+  const [selectedSubscription, setSelectedSubscription] = useState(
+    selectedSubscriptionSignal.value,
+  );
   const [modalVisible, setModalVisible] = useState(modalVisibleSignal.value);
 
   // Subscribe to signal changes
@@ -56,9 +62,9 @@ export default function SubscriptionFlow() {
       effect(() => setModalVisible(modalVisibleSignal.value)),
     ];
 
-    return () => unsubscribes.forEach(fn => fn());
+    return () => unsubscribes.forEach((fn) => fn());
   }, []);
-  
+
   // Use the useIAP hook for managing subscriptions with built-in subscription status
   const {
     connected,
@@ -380,7 +386,6 @@ export default function SubscriptionFlow() {
       </View>
     );
   };
-
 
   return (
     <ScrollView style={styles.container}>

@@ -6,10 +6,8 @@ import ExpoIapModule from '../ExpoIapModule';
 
 // Types
 import {
-  ProductPurchase,
-  PurchaseError,
   Purchase,
-  SubscriptionPurchase,
+  PurchaseError,
 } from '../ExpoIap.types';
 import type {
   ProductStatusIOS,
@@ -18,7 +16,7 @@ import type {
 import {Linking} from 'react-native';
 
 export type TransactionEvent = {
-  transaction?: ProductPurchase;
+  transaction?: Purchase;
   error?: PurchaseError;
 };
 
@@ -39,7 +37,7 @@ export type TransactionEvent = {
 export const transactionUpdatedIOS = (
   listener: (event: TransactionEvent) => void,
 ) => {
-  const isProductPurchase = (item: unknown): item is ProductPurchase => {
+  const isPurchase = (item: unknown): item is Purchase => {
     return (
       item != null &&
       typeof item === 'object' &&
@@ -51,18 +49,18 @@ export const transactionUpdatedIOS = (
 
   // Helper function to safely convert Purchase to TransactionEvent
   const mapPurchaseToTransactionEvent = (
-    purchase: Purchase | SubscriptionPurchase,
+    purchase: Purchase,
   ): TransactionEvent => {
     // Validate the purchase object before casting
-    if (isProductPurchase(purchase)) {
+    if (isPurchase(purchase)) {
       return {
-        transaction: purchase as ProductPurchase,
+        transaction: purchase as Purchase,
       };
     }
 
     // Fallback: create a basic TransactionEvent structure
     return {
-      transaction: purchase as ProductPurchase,
+      transaction: purchase as Purchase,
     };
   };
 
@@ -140,7 +138,7 @@ export const subscriptionStatusIOS = (
  */
 export const currentEntitlementIOS = (
   sku: string,
-): Promise<ProductPurchase> => {
+): Promise<Purchase> => {
   return ExpoIapModule.currentEntitlement(sku);
 };
 
@@ -153,7 +151,7 @@ export const currentEntitlementIOS = (
  *
  * @platform iOS
  */
-export const latestTransactionIOS = (sku: string): Promise<ProductPurchase> => {
+export const latestTransactionIOS = (sku: string): Promise<Purchase> => {
   return ExpoIapModule.latestTransaction(sku);
 };
 
@@ -241,7 +239,7 @@ export const getTransactionJwsIOS = (sku: string): Promise<string> => {
  *   isValid: boolean;
  *   receiptData: string;
  *   jwsRepresentation: string;
- *   latestTransaction?: ProductPurchase;
+ *   latestTransaction?: Purchase;
  * }>}
  */
 export const validateReceiptIOS = async (
@@ -250,7 +248,7 @@ export const validateReceiptIOS = async (
   isValid: boolean;
   receiptData: string;
   jwsRepresentation: string;
-  latestTransaction?: ProductPurchase;
+  latestTransaction?: Purchase;
 }> => {
   const result = await ExpoIapModule.validateReceiptIOS(sku);
   return result;
@@ -362,7 +360,7 @@ export const subscriptionStatus = (
 /**
  * @deprecated Use `currentEntitlementIOS` instead. This function will be removed in version 3.0.0.
  */
-export const currentEntitlement = (sku: string): Promise<ProductPurchase> => {
+export const currentEntitlement = (sku: string): Promise<Purchase> => {
   console.warn(
     '`currentEntitlement` is deprecated. Use `currentEntitlementIOS` instead. This function will be removed in version 3.0.0.',
   );
@@ -372,7 +370,7 @@ export const currentEntitlement = (sku: string): Promise<ProductPurchase> => {
 /**
  * @deprecated Use `latestTransactionIOS` instead. This function will be removed in version 3.0.0.
  */
-export const latestTransaction = (sku: string): Promise<ProductPurchase> => {
+export const latestTransaction = (sku: string): Promise<Purchase> => {
   console.warn(
     '`latestTransaction` is deprecated. Use `latestTransactionIOS` instead. This function will be removed in version 3.0.0.',
   );
