@@ -106,6 +106,10 @@ export interface UseIAPOptions {
   onPromotedProductIOS?: (product: Product) => void;
 }
 
+/**
+ * React Hook for managing In-App Purchases.
+ * See documentation at https://expo-iap.hyo.dev/docs/hooks/useIAP
+ */
 export function useIAP(options?: UseIAPOptions): UseIap {
   const [connected, setConnected] = useState<boolean>(false);
   const [products, setProducts] = useState<Product[]>([]);

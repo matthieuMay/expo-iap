@@ -3,16 +3,31 @@
 ## Release Notes
 
 ### v2.8.1 (2025-08-19)
+
 - Added `platform` field to all types for runtime type discrimination
 - Moved common fields to shared base types (`ids`, `debugDescription`)
 - Fixed iOS native code to populate missing subscription fields
 - No breaking changes, but deprecated fields will be removed in v2.9.0
 
 ### v2.8.0 (2025-08-18)
+
 - **Breaking**: iOS field naming convention changed (e.g., `quantityIos` → `quantityIOS`)
 - All iOS-related field names ending with "Ios" now end with "IOS"
 
 ## Expo-Specific Guidelines
+
+### iOS Pod Configuration
+
+**CRITICAL WARNING**: Never modify the platform versions in `ios/ExpoIap.podspec`
+
+- Both iOS and tvOS platform versions MUST remain at `13.4` even though the code requires iOS/tvOS 15.0+
+- Changing to `15.0` can cause expo prebuild to exclude the module in certain Expo SDKs (known bug)
+- See issue: [#168](https://github.com/hyochan/expo-iap/issues/168)
+- This is kept at `13.4` for compatibility with affected Expo SDKs
+- The actual iOS/tvOS 15.0+ requirement is enforced at build time via @available annotations
+- Users must ensure their app target is set to iOS 15.0 or higher:
+  - app.json: `"expo": { "ios": { "deploymentTarget": "15.0" } }`
+  - or app.config.ts: `ios: { deploymentTarget: '15.0' }`
 
 ### Pre-Commit Checks
 
@@ -30,6 +45,7 @@ Before committing any changes:
 ### Platform-Specific Naming Conventions
 
 #### Field Naming
+
 - **iOS-related fields**: Use `IOS` suffix (e.g., `displayNameIOS`, `discountsIOS`, `introductoryPriceIOS`)
   - **Exception**: When an acronym appears at the end of a field name, use uppercase (e.g., `quantityIOS`, `appBundleIdIOS`, not `quantityIos`)
   - Platform-specific fields: `currencyCodeIOS`, `currencySymbolIOS`, `countryCodeIOS`
@@ -41,6 +57,7 @@ Before committing any changes:
   - Use these for data that exists on both platforms without platform-specific variations
 
 #### Type Naming
+
 - **iOS types**: Use `IOS` suffix (e.g., `PurchaseIOS`, `ProductIOS`)
 - **Android types**: Use descriptive prefixes to identify subtypes:
   - ✅ Good: `ProductAndroidOneTimePurchaseOfferDetail`, `ProductSubscriptionAndroidOfferDetails`, `PurchaseAndroidState`
@@ -48,6 +65,7 @@ Before committing any changes:
 - **General IAP types**: Use `Iap` prefix (e.g., `IapPurchase`, not `IAPPurchase`)
 
 #### General Rules
+
 - **ID fields**: Use `Id` instead of `ID` (e.g., `productId`, `transactionId`, not `productID`, `transactionID`)
 - **Consistent naming**: This applies to functions, types, and file names
 - **Deprecation**: Fields without platform suffixes will be removed in v2.9.0
