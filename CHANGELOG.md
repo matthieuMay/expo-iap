@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.8.3] - 2025-08-27
+
+### Fixed
+- Fixed TypeScript type issues
+- Added critical warning about iOS platform version in podspec (#169)
+
 ## [2.8.2] - 2025-08-26
 
 ### Added
