@@ -166,7 +166,7 @@ class ExpoIapModule :
                         }
 
                     if (skuList.isEmpty()) {
-                        promise.reject(IapConstants.EMPTY_SKU_LIST, "The SKU list is empty.", null)
+                        promise.reject(IapErrorCode.E_EMPTY_SKU_LIST, "The SKU list is empty.", null)
                         return@ensureConnection
                     }
 
@@ -575,7 +575,9 @@ class ExpoIapModule :
         promise: Promise,
         callback: (billingClient: BillingClient) -> Unit,
     ) {
-        if (billingClientCache?.isReady == true) {
+        // With auto-reconnection enabled, we only need to check if billing client exists
+        // The service will automatically reconnect when needed
+        if (billingClientCache != null) {
             callback(billingClientCache!!)
             return
         }
@@ -605,6 +607,7 @@ class ExpoIapModule :
                 .newBuilder(context)
                 .setListener(this)
                 .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+                .enableAutoServiceReconnection() // Automatically handle service disconnections
                 .build()
 
         billingClientCache?.startConnection(
