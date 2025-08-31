@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [2.8.4] - 2025-08-31
+
+### Fixed
+- Fixed iOS 18.4 properties build failure on Xcode 16.3 and below by adding Swift 6.1 compiler guard
+
+### Changed
+- Android: Enabled automatic service reconnection (Android Billing Client v8 feature) and simplified connection logic (#178)
+
 ## [2.8.3] - 2025-08-27
 
 ### Fixed
