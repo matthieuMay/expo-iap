@@ -385,10 +385,14 @@ public class ExpoIapModule: Module {
                     "preorderDate": appTransaction.preorderDate.map { $0.timeIntervalSince1970 * 1000 }
                 ]
                 
+                // iOS 18.4+ properties - only compile with Xcode 16.4+ (Swift 6.1+)
+                // This prevents build failures on Xcode 16.3 and below
+                #if swift(>=6.1)
                 if #available(iOS 18.4, *) {
                     result["appTransactionId"] = appTransaction.appTransactionID
                     result["originalPlatform"] = appTransaction.originalPlatform.rawValue
                 }
+                #endif
                 
                 return result
                 #else
