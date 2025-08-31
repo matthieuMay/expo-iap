@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.8.5] - 2025-09-03
+
+### Fixed
+- Fixed Android `finishTransaction` null error by adding fallback to `purchaseTokenAndroid` (#180)
+
 ## [2.8.4] - 2025-08-31
 
 ### Fixed
