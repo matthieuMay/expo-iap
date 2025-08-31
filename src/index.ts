@@ -20,6 +20,7 @@ import {
   Product,
   Purchase,
   PurchaseError,
+  ErrorCode,
   PurchaseResult,
   RequestSubscriptionProps,
   RequestPurchaseProps,
@@ -570,12 +571,29 @@ export const finishTransaction = ({
       },
       android: async () => {
         const androidPurchase = purchase as PurchaseAndroid;
-
-        if (isConsumable) {
-          return ExpoIapModule.consumeProduct(androidPurchase.purchaseToken);
+        
+        // Use purchaseToken if available, fallback to purchaseTokenAndroid for backward compatibility
+        const token = androidPurchase.purchaseToken || androidPurchase.purchaseTokenAndroid;
+        
+        if (!token) {
+          return Promise.reject(
+            new PurchaseError(
+              '[expo-iap]: PurchaseError',
+              'Purchase token is required to finish transaction',
+              undefined,
+              undefined,
+              'E_DEVELOPER_ERROR' as ErrorCode,
+              androidPurchase.productId,
+              'android'
+            )
+          );
         }
 
-        return ExpoIapModule.acknowledgePurchase(androidPurchase.purchaseToken);
+        if (isConsumable) {
+          return ExpoIapModule.consumeProduct(token);
+        }
+
+        return ExpoIapModule.acknowledgePurchase(token);
       },
     }) || (() => Promise.reject(new Error('Unsupported Platform')))
   )();
