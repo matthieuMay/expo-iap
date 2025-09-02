@@ -14,7 +14,7 @@ import {
   getPurchaseHistories,
   finishTransaction as finishTransactionInternal,
   requestPurchase as requestPurchaseInternal,
-  requestProducts,
+  fetchProducts,
   validateReceipt as validateReceiptInternal,
   getActiveSubscriptions,
   hasActiveSubscriptions,
@@ -60,18 +60,26 @@ type UseIap = {
   }) => Promise<PurchaseResult | boolean>;
   getAvailablePurchases: (skus: string[]) => Promise<void>;
   getPurchaseHistories: (skus: string[]) => Promise<void>;
+  fetchProducts: (params: {
+    skus: string[];
+    type?: 'inapp' | 'subs';
+  }) => Promise<void>;
+  /**
+   * @deprecated Use fetchProducts({ skus, type: 'inapp' | 'subs' }) instead. This method will be removed in version 3.0.0.
+   * The 'request' prefix should only be used for event-based operations.
+   */
   requestProducts: (params: {
     skus: string[];
     type?: 'inapp' | 'subs';
   }) => Promise<void>;
   /**
-   * @deprecated Use requestProducts({ skus, type: 'inapp' }) instead. This method will be removed in version 3.0.0.
-   * Note: This method internally uses requestProducts, so no deprecation warning is shown.
+   * @deprecated Use fetchProducts({ skus, type: 'inapp' }) instead. This method will be removed in version 3.0.0.
+   * Note: This method internally uses fetchProducts, so no deprecation warning is shown.
    */
   getProducts: (skus: string[]) => Promise<void>;
   /**
-   * @deprecated Use requestProducts({ skus, type: 'subs' }) instead. This method will be removed in version 3.0.0.
-   * Note: This method internally uses requestProducts, so no deprecation warning is shown.
+   * @deprecated Use fetchProducts({ skus, type: 'subs' }) instead. This method will be removed in version 3.0.0.
+   * Note: This method internally uses fetchProducts, so no deprecation warning is shown.
    */
   getSubscriptions: (skus: string[]) => Promise<void>;
   requestPurchase: (params: {
@@ -183,7 +191,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
   const getProductsInternal = useCallback(
     async (skus: string[]): Promise<void> => {
       try {
-        const result = await requestProducts({skus, type: 'inapp'});
+        const result = await fetchProducts({skus, type: 'inapp'});
         setProducts((prevProducts) =>
           mergeWithDuplicateCheck(
             prevProducts,
@@ -201,7 +209,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
   const getSubscriptionsInternal = useCallback(
     async (skus: string[]): Promise<void> => {
       try {
-        const result = await requestProducts({skus, type: 'subs'});
+        const result = await fetchProducts({skus, type: 'subs'});
         setSubscriptions((prevSubscriptions) =>
           mergeWithDuplicateCheck(
             prevSubscriptions,
@@ -216,13 +224,13 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     [mergeWithDuplicateCheck],
   );
 
-  const requestProductsInternal = useCallback(
+  const fetchProductsInternal = useCallback(
     async (params: {
       skus: string[];
       type?: 'inapp' | 'subs';
     }): Promise<void> => {
       try {
-        const result = await requestProducts(params);
+        const result = await fetchProducts(params);
         if (params.type === 'subs') {
           setSubscriptions((prevSubscriptions) =>
             mergeWithDuplicateCheck(
@@ -245,6 +253,19 @@ export function useIAP(options?: UseIAPOptions): UseIap {
       }
     },
     [mergeWithDuplicateCheck],
+  );
+
+  const requestProductsInternal = useCallback(
+    async (params: {
+      skus: string[];
+      type?: 'inapp' | 'subs';
+    }): Promise<void> => {
+      console.warn(
+        "`requestProducts` is deprecated in useIAP hook. Use the new `fetchProducts` method instead. The 'request' prefix should only be used for event-based operations."
+      );
+      return fetchProductsInternal(params);
+    },
+    [fetchProductsInternal],
   );
 
   const getAvailablePurchasesInternal = useCallback(async (): Promise<void> => {
@@ -460,6 +481,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     clearCurrentPurchaseError,
     getAvailablePurchases: getAvailablePurchasesInternal,
     getPurchaseHistories: getPurchaseHistoriesInternal,
+    fetchProducts: fetchProductsInternal,
     requestProducts: requestProductsInternal,
     requestPurchase: requestPurchaseWithReset,
     validateReceipt,

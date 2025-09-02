@@ -19,6 +19,7 @@ module.exports = {
     getPendingTransactionsIOS: jest.fn(),
     clearTransactionIOS: jest.fn(),
     // Common methods
+    fetchProducts: jest.fn(),
     requestProducts: jest.fn(),
     requestPurchase: jest.fn(),
     requestPurchaseOnPromotedProductIOS: jest.fn(),

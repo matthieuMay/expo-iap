@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2.8.7] - 2025-09-03
+
+### Added
+
+- `fetchProducts` function following OpenIAP terminology (replaces `requestProducts`)
+
+### Deprecated
+
+- `requestProducts` - Use `fetchProducts` instead (will be removed in v3.0.0)
+
+### Changed
+
+- Internal useIAP hook now uses `fetchProducts`
+- Updated documentation and deprecation messages
+
 ## [2.8.6]
 
 ### Changed

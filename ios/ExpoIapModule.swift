@@ -447,7 +447,29 @@ public class ExpoIapModule: Module {
             self.promotedProduct = nil
         }
 
+        AsyncFunction("fetchProducts") { (skus: [String]) -> [[String: Any?]?] in
+            try self.ensureConnection()
+            
+            let productStore = self.productStore!
+            
+            do {
+                let fetchedProducts = try await Product.products(for: skus)
+                await productStore.performOnActor { isolatedStore in
+                    fetchedProducts.forEach { product in
+                        isolatedStore.addProduct(product)
+                    }
+                }
+                let products = await productStore.getAllProducts()
+                return products.map { serializeProduct($0) }.compactMap { $0 }
+            } catch {
+                print("Error fetching items: \(error)")
+                throw error
+            }
+        }
+
         AsyncFunction("requestProducts") { (skus: [String]) -> [[String: Any?]?] in
+            print("WARNING: requestProducts is deprecated. Use fetchProducts instead. The 'request' prefix should only be used for event-based operations. This method will be removed in version 3.0.0.")
+            
             try self.ensureConnection()
             
             let productStore = self.productStore!

@@ -29,6 +29,7 @@ jest.mock('expo-iap', () => ({
   endConnection: jest.fn(),
   getProducts: jest.fn(),
   getSubscriptions: jest.fn(),
+  fetchProducts: jest.fn(),
   requestProducts: jest.fn(),
   requestPurchase: jest.fn(),
   finishTransaction: jest.fn(),

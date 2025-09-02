@@ -124,7 +124,7 @@ export function initConnection(): Promise<boolean> {
 
 export const getProducts = async (skus: string[]): Promise<Product[]> => {
   console.warn(
-    "`getProducts` is deprecated. Use `requestProducts({ skus, type: 'inapp' })` instead. This function will be removed in version 3.0.0.",
+    "`getProducts` is deprecated. Use `fetchProducts({ skus, type: 'inapp' })` instead. This function will be removed in version 3.0.0.",
   );
   if (!skus?.length) {
     return Promise.reject(new Error('"skus" is required'));
@@ -132,7 +132,7 @@ export const getProducts = async (skus: string[]): Promise<Product[]> => {
 
   return Platform.select({
     ios: async () => {
-      const rawItems = await ExpoIapModule.requestProducts(skus);
+      const rawItems = await ExpoIapModule.fetchProducts(skus);
       return rawItems.filter((item: unknown) => {
         if (!isProductIOS(item)) return false;
         return (
@@ -145,7 +145,7 @@ export const getProducts = async (skus: string[]): Promise<Product[]> => {
       }) as Product[];
     },
     android: async () => {
-      const products = await ExpoIapModule.requestProducts('inapp', skus);
+      const products = await ExpoIapModule.fetchProducts('inapp', skus);
       return products.filter((product: unknown) =>
         isProductAndroid<Product>(product),
       );
@@ -158,7 +158,7 @@ export const getSubscriptions = async (
   skus: string[],
 ): Promise<SubscriptionProduct[]> => {
   console.warn(
-    "`getSubscriptions` is deprecated. Use `requestProducts({ skus, type: 'subs' })` instead. This function will be removed in version 3.0.0.",
+    "`getSubscriptions` is deprecated. Use `fetchProducts({ skus, type: 'subs' })` instead. This function will be removed in version 3.0.0.",
   );
   if (!skus?.length) {
     return Promise.reject(new Error('"skus" is required'));
@@ -166,7 +166,7 @@ export const getSubscriptions = async (
 
   return Platform.select({
     ios: async () => {
-      const rawItems = await ExpoIapModule.requestProducts(skus);
+      const rawItems = await ExpoIapModule.fetchProducts(skus);
       return rawItems.filter((item: unknown) => {
         if (!isProductIOS(item)) return false;
         return (
@@ -179,7 +179,7 @@ export const getSubscriptions = async (
       }) as SubscriptionProduct[];
     },
     android: async () => {
-      const rawItems = await ExpoIapModule.requestProducts('subs', skus);
+      const rawItems = await ExpoIapModule.fetchProducts('subs', skus);
       return rawItems.filter((item: unknown) => {
         if (!isProductAndroid(item)) return false;
         return (
@@ -200,28 +200,28 @@ export async function endConnection(): Promise<boolean> {
 }
 
 /**
- * Request products with unified API (v2.7.0+)
+ * Fetch products with unified API (v2.7.0+)
  *
- * @param params - Product request configuration
+ * @param params - Product fetch configuration
  * @param params.skus - Array of product SKUs to fetch
  * @param params.type - Type of products: 'inapp' for regular products (default) or 'subs' for subscriptions
  *
  * @example
  * ```typescript
  * // Regular products
- * const products = await requestProducts({
+ * const products = await fetchProducts({
  *   skus: ['product1', 'product2'],
  *   type: 'inapp'
  * });
  *
  * // Subscriptions
- * const subscriptions = await requestProducts({
+ * const subscriptions = await fetchProducts({
  *   skus: ['sub1', 'sub2'],
  *   type: 'subs'
  * });
  * ```
  */
-export const requestProducts = async ({
+export const fetchProducts = async ({
   skus,
   type = 'inapp',
 }: {
@@ -233,7 +233,7 @@ export const requestProducts = async ({
   }
 
   if (Platform.OS === 'ios') {
-    const rawItems = await ExpoIapModule.requestProducts(skus);
+    const rawItems = await ExpoIapModule.fetchProducts(skus);
     const filteredItems = rawItems.filter((item: unknown) => {
       if (!isProductIOS(item)) return false;
       return (
@@ -251,7 +251,7 @@ export const requestProducts = async ({
   }
 
   if (Platform.OS === 'android') {
-    const items = await ExpoIapModule.requestProducts(type, skus);
+    const items = await ExpoIapModule.fetchProducts(type, skus);
     const filteredItems = items.filter((item: unknown) => {
       if (!isProductAndroid(item)) return false;
       return (
@@ -269,6 +269,41 @@ export const requestProducts = async ({
   }
 
   throw new Error('Unsupported platform');
+};
+
+/**
+ * @deprecated Use `fetchProducts` instead. This method will be removed in version 3.0.0.
+ * 
+ * The 'request' prefix should only be used for event-based operations that trigger
+ * purchase flows. Since this function simply fetches product information, it has been
+ * renamed to `fetchProducts` to follow OpenIAP terminology guidelines.
+ * 
+ * @example
+ * ```typescript
+ * // Old way (deprecated)
+ * const products = await requestProducts({
+ *   skus: ['com.example.product1'],
+ *   type: 'inapp'
+ * });
+ * 
+ * // New way (recommended)
+ * const products = await fetchProducts({
+ *   skus: ['com.example.product1'],
+ *   type: 'inapp'
+ * });
+ * ```
+ */
+export const requestProducts = async ({
+  skus,
+  type = 'inapp',
+}: {
+  skus: string[];
+  type?: 'inapp' | 'subs';
+}): Promise<Product[] | SubscriptionProduct[]> => {
+  console.warn(
+    "`requestProducts` is deprecated. Use `fetchProducts` instead. The 'request' prefix should only be used for event-based operations. This method will be removed in version 3.0.0."
+  );
+  return fetchProducts({ skus, type });
 };
 
 /**

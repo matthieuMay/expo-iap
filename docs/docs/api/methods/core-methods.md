@@ -178,17 +178,17 @@ interface AppTransactionIOS {
 
 **Note:** This is useful for verifying that a user legitimately purchased your app. The device verification data can be sent to your server for validation.
 
-## requestProducts()
+## fetchProducts()
 
 Fetches product or subscription information from the store.
 
 ```tsx
-import {requestProducts} from 'expo-iap';
+import {fetchProducts} from 'expo-iap';
 
 // Fetch in-app products
-const fetchProducts = async () => {
+const loadProducts = async () => {
   try {
-    const products = await requestProducts({
+    const products = await fetchProducts({
       skus: ['com.example.product1', 'com.example.product2'],
       type: 'inapp',
     });
@@ -201,9 +201,9 @@ const fetchProducts = async () => {
 };
 
 // Fetch subscriptions
-const fetchSubscriptions = async () => {
+const loadSubscriptions = async () => {
   try {
-    const subscriptions = await requestProducts({
+    const subscriptions = await fetchProducts({
       skus: ['com.example.premium_monthly', 'com.example.premium_yearly'],
       type: 'subs',
     });
@@ -226,9 +226,43 @@ const fetchSubscriptions = async () => {
 
 [**Product Interface**](../types.md#Product)
 
+## requestProducts() - Deprecated
+
+> **⚠️ DEPRECATED:** This method is deprecated. Use `fetchProducts({ skus, type })` instead. This method will be removed in version 3.0.0.
+> 
+> The 'request' prefix should only be used for event-based operations that trigger purchase flows. Since this function simply fetches product information, it has been renamed to `fetchProducts` to follow OpenIAP terminology guidelines.
+
+Fetches product or subscription information from the store.
+
+```tsx
+// Old way (deprecated)
+import {requestProducts} from 'expo-iap';
+const products = await requestProducts({
+  skus: ['com.example.product1'],
+  type: 'inapp',
+});
+
+// New way (recommended)
+import {fetchProducts} from 'expo-iap';
+const products = await fetchProducts({
+  skus: ['com.example.product1'],
+  type: 'inapp',
+});
+```
+
+**Parameters:**
+
+- `params` (object):
+  - `skus` (string[]): Array of product or subscription IDs to fetch
+  - `type` ('inapp' | 'subs'): Product type - 'inapp' for products, 'subs' for subscriptions
+
+**Returns:** `Promise<Product[]>`
+
+[**Product Interface**](../types.md#Product)
+
 ## getProducts() - Deprecated
 
-> **⚠️ DEPRECATED:** This method is deprecated. Use `requestProducts({ skus, type: 'inapp' })` instead.
+> **⚠️ DEPRECATED:** This method is deprecated. Use `fetchProducts({ skus, type: 'inapp' })` instead.
 
 Fetches product information from the store.
 
@@ -238,8 +272,8 @@ import {getProducts} from 'expo-iap';
 const products = await getProducts(['com.example.product1']);
 
 // New way (recommended)
-import {requestProducts} from 'expo-iap';
-const products = await requestProducts({
+import {fetchProducts} from 'expo-iap';
+const products = await fetchProducts({
   skus: ['com.example.product1'],
   type: 'inapp',
 });
@@ -253,7 +287,7 @@ const products = await requestProducts({
 
 ## getSubscriptions() - Deprecated
 
-> **⚠️ DEPRECATED:** This method is deprecated. Use `requestProducts({ skus, type: 'subs' })` instead.
+> **⚠️ DEPRECATED:** This method is deprecated. Use `fetchProducts({ skus, type: 'subs' })` instead.
 
 Fetches subscription product information from the store.
 
@@ -263,8 +297,8 @@ import {getSubscriptions} from 'expo-iap';
 const subs = await getSubscriptions(['com.example.premium_monthly']);
 
 // New way (recommended)
-import {requestProducts} from 'expo-iap';
-const subs = await requestProducts({
+import {fetchProducts} from 'expo-iap';
+const subs = await fetchProducts({
   skus: ['com.example.premium_monthly'],
   type: 'subs',
 });
