@@ -132,7 +132,7 @@ export const getProducts = async (skus: string[]): Promise<Product[]> => {
 
   return Platform.select({
     ios: async () => {
-      const rawItems = await ExpoIapModule.getItems(skus);
+      const rawItems = await ExpoIapModule.requestProducts(skus);
       return rawItems.filter((item: unknown) => {
         if (!isProductIOS(item)) return false;
         return (
@@ -145,7 +145,7 @@ export const getProducts = async (skus: string[]): Promise<Product[]> => {
       }) as Product[];
     },
     android: async () => {
-      const products = await ExpoIapModule.getItemsByType('inapp', skus);
+      const products = await ExpoIapModule.requestProducts('inapp', skus);
       return products.filter((product: unknown) =>
         isProductAndroid<Product>(product),
       );
@@ -166,7 +166,7 @@ export const getSubscriptions = async (
 
   return Platform.select({
     ios: async () => {
-      const rawItems = await ExpoIapModule.getItems(skus);
+      const rawItems = await ExpoIapModule.requestProducts(skus);
       return rawItems.filter((item: unknown) => {
         if (!isProductIOS(item)) return false;
         return (
@@ -179,7 +179,7 @@ export const getSubscriptions = async (
       }) as SubscriptionProduct[];
     },
     android: async () => {
-      const rawItems = await ExpoIapModule.getItemsByType('subs', skus);
+      const rawItems = await ExpoIapModule.requestProducts('subs', skus);
       return rawItems.filter((item: unknown) => {
         if (!isProductAndroid(item)) return false;
         return (
@@ -233,7 +233,7 @@ export const requestProducts = async ({
   }
 
   if (Platform.OS === 'ios') {
-    const rawItems = await ExpoIapModule.getItems(skus);
+    const rawItems = await ExpoIapModule.requestProducts(skus);
     const filteredItems = rawItems.filter((item: unknown) => {
       if (!isProductIOS(item)) return false;
       return (
@@ -251,7 +251,7 @@ export const requestProducts = async ({
   }
 
   if (Platform.OS === 'android') {
-    const items = await ExpoIapModule.getItemsByType(type, skus);
+    const items = await ExpoIapModule.requestProducts(type, skus);
     const filteredItems = items.filter((item: unknown) => {
       if (!isProductAndroid(item)) return false;
       return (
@@ -277,32 +277,49 @@ export const requestProducts = async ({
 export const getPurchaseHistory = ({
   alsoPublishToEventListener = false,
   onlyIncludeActiveItems = false,
+  alsoPublishToEventListenerIOS,
+  onlyIncludeActiveItemsIOS,
 }: {
+  /** @deprecated Use alsoPublishToEventListenerIOS instead */
   alsoPublishToEventListener?: boolean;
+  /** @deprecated Use onlyIncludeActiveItemsIOS instead */
   onlyIncludeActiveItems?: boolean;
+  alsoPublishToEventListenerIOS?: boolean;
+  onlyIncludeActiveItemsIOS?: boolean;
 } = {}): Promise<Purchase[]> => {
   console.warn(
     '`getPurchaseHistory` is deprecated. Use `getPurchaseHistories` instead. This function will be removed in version 3.0.0.',
   );
   return getPurchaseHistories({
-    alsoPublishToEventListener,
-    onlyIncludeActiveItems,
+    alsoPublishToEventListenerIOS: alsoPublishToEventListenerIOS ?? alsoPublishToEventListener,
+    onlyIncludeActiveItemsIOS: onlyIncludeActiveItemsIOS ?? onlyIncludeActiveItems,
   });
 };
 
+/**
+ * @deprecated Use getAvailablePurchases instead. This function is just calling getAvailablePurchases internally on iOS
+ * and returns an empty array on Android (Google Play Billing v8 removed purchase history API).
+ * Will be removed in v2.9.0
+ */
 export const getPurchaseHistories = ({
   alsoPublishToEventListener = false,
   onlyIncludeActiveItems = false,
+  alsoPublishToEventListenerIOS,
+  onlyIncludeActiveItemsIOS,
 }: {
+  /** @deprecated Use alsoPublishToEventListenerIOS instead */
   alsoPublishToEventListener?: boolean;
+  /** @deprecated Use onlyIncludeActiveItemsIOS instead */
   onlyIncludeActiveItems?: boolean;
+  alsoPublishToEventListenerIOS?: boolean;
+  onlyIncludeActiveItemsIOS?: boolean;
 } = {}): Promise<Purchase[]> =>
   (
     Platform.select({
       ios: async () => {
         return ExpoIapModule.getAvailableItems(
-          alsoPublishToEventListener,
-          onlyIncludeActiveItems,
+          alsoPublishToEventListenerIOS ?? alsoPublishToEventListener,
+          onlyIncludeActiveItemsIOS ?? onlyIncludeActiveItems,
         );
       },
       android: async () => {
@@ -319,16 +336,22 @@ export const getPurchaseHistories = ({
 export const getAvailablePurchases = ({
   alsoPublishToEventListener = false,
   onlyIncludeActiveItems = true,
+  alsoPublishToEventListenerIOS,
+  onlyIncludeActiveItemsIOS,
 }: {
+  /** @deprecated Use alsoPublishToEventListenerIOS instead */
   alsoPublishToEventListener?: boolean;
+  /** @deprecated Use onlyIncludeActiveItemsIOS instead */
   onlyIncludeActiveItems?: boolean;
+  alsoPublishToEventListenerIOS?: boolean;
+  onlyIncludeActiveItemsIOS?: boolean;
 } = {}): Promise<Purchase[]> =>
   (
     Platform.select({
       ios: () =>
         ExpoIapModule.getAvailableItems(
-          alsoPublishToEventListener,
-          onlyIncludeActiveItems,
+          alsoPublishToEventListenerIOS ?? alsoPublishToEventListener,
+          onlyIncludeActiveItemsIOS ?? onlyIncludeActiveItems,
         ),
       android: async () => {
         const products = await ExpoIapModule.getAvailableItemsByType('inapp');
@@ -433,7 +456,7 @@ export const requestPurchase = (
 
     return (async () => {
       const offer = offerToRecordIOS(withOffer);
-      const purchase = await ExpoIapModule.buyProduct(
+      const purchase = await ExpoIapModule.requestPurchase(
         sku,
         andDangerouslyFinishTransactionAutomatically,
         appAccountToken,
@@ -465,7 +488,7 @@ export const requestPurchase = (
       } = normalizedRequest;
 
       return (async () => {
-        return ExpoIapModule.buyItemByType({
+        return ExpoIapModule.requestPurchase({
           type: 'inapp',
           skuArr: skus,
           purchaseToken: undefined,
@@ -491,7 +514,7 @@ export const requestPurchase = (
       } = normalizedRequest;
 
       return (async () => {
-        return ExpoIapModule.buyItemByType({
+        return ExpoIapModule.requestPurchase({
           type: 'subs',
           skuArr: skus,
           purchaseToken: purchaseTokenAndroid || purchaseToken,
@@ -590,10 +613,10 @@ export const finishTransaction = ({
         }
 
         if (isConsumable) {
-          return ExpoIapModule.consumeProduct(token);
+          return ExpoIapModule.consumeProductAndroid(token);
         }
 
-        return ExpoIapModule.acknowledgePurchase(token);
+        return ExpoIapModule.acknowledgePurchaseAndroid(token);
       },
     }) || (() => Promise.reject(new Error('Unsupported Platform')))
   )();
