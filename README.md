@@ -69,12 +69,13 @@ For detailed usage examples and error handling, see the [documentation](https://
     <img width="600" alt="courier_dot_com" src="https://static.xx.fbcdn.net/rsrc.php/y3/r/y6QsbGgc866.svg" />
 </a>
 
-### <p style="color: rgb(205, 127, 50);">Bronze</p>
-
-<a href="https://www.courier.com/?utm_source=react-native-iap&utm_campaign=osssponsors">
-    <img width="160" alt="courier_dot_com" src="https://github.com/user-attachments/assets/319d8966-6839-498d-8ead-ce8cc72c3bca" />
-</a>
-
 ## Past Supporters
 
-<a href="https://namiml.com" style="opacity: 50%"><img src="https://github.com/hyochan/react-native-iap/assets/27461460/89d71f61-bb73-400a-83bd-fe0f96eb726e" alt="Nami ML" width="140"/></a>
+<div style="display: flex; align-items:center; gap: 10px;">
+  <a href="https://namiml.com" style="opacity: 50%">
+    <img src="https://github.com/hyochan/react-native-iap/assets/27461460/89d71f61-bb73-400a-83bd-fe0f96eb726e" alt="Nami ML" width="140"/>
+  </a>
+  <a href="https://www.courier.com/?utm_source=react-native-iap&utm_campaign=osssponsors" style="opacity: 50%;">
+    <img width="80" alt="courier_dot_com" src="https://github.com/user-attachments/assets/319d8966-6839-498d-8ead-ce8cc72c3bca" />
+  </a>
+</div>
