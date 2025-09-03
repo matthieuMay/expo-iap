@@ -93,3 +93,10 @@ For new feature proposals:
 2. Get community feedback and consensus
 3. Ensure alignment with OpenIAP standards
 4. Implement following the agreed specification
+
+## Documentation Guidelines
+
+### Blog Post Conventions
+
+- **Title format**: Use version number only (e.g., `v2.8.7 - Feature Description`, not `Expo IAP v2.8.7 - Feature Description`)
+- **Heading format**: Use version number only in headings (e.g., `# v2.8.7 Release Notes`, not `# Expo IAP v2.8.7 Release Notes`)
