@@ -524,7 +524,24 @@ public class ExpoIapModule: Module {
                         if await self.productStore?.getProduct(productID: transaction.productID)
                             != nil
                         {
-                            addTransaction(transaction: transaction, jwsRepresentationIOS: verification.jwsRepresentation)
+                            // For auto-renewable subscriptions, check if still active
+                            if transaction.productType == .autoRenewable {
+                                // Check if the subscription is still active by verifying expiration date
+                                if let expirationDate = transaction.expirationDate {
+                                    let currentDate = Date()
+                                    if currentDate < expirationDate {
+                                        addTransaction(transaction: transaction, jwsRepresentationIOS: verification.jwsRepresentation)
+                                    }
+                                    // Skip expired subscriptions
+                                } else {
+                                    // No expiration date means it might be a lifetime subscription or error
+                                    // Include it to be safe
+                                    addTransaction(transaction: transaction, jwsRepresentationIOS: verification.jwsRepresentation)
+                                }
+                            } else {
+                                // Non-consumable and consumable products don't expire
+                                addTransaction(transaction: transaction, jwsRepresentationIOS: verification.jwsRepresentation)
+                            }
                         }
                     case .nonRenewable:
                         if await self.productStore?.getProduct(productID: transaction.productID)
