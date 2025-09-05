@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## [2.8.8] - 2025-09-05
+
+### Added
+
+- Enhanced `ActiveSubscription` interface with backend validation fields:
+  - `transactionId` - Transaction identifier for backend validation  
+  - `purchaseToken` - JWT token (iOS) or purchase token (Android) for backend validation
+  - `transactionDate` - Transaction timestamp
+- Return subscription changes from `showManageSubscriptionsIOS()` as Promise data
+
+### Fixed
+
+- Fixed iOS `getAvailablePurchases({ onlyIncludeActiveItemsIOS: true })` returning expired subscriptions
+  - Now correctly uses `Transaction.currentEntitlements` for better performance and accuracy
+- Fixed subscription status matching to specific SKU in `showManageSubscriptionsIOS()`
+  - Prevents picking wrong status when multiple statuses exist in a subscription group
+
+### Changed
+
+- Removed unnecessary event sending from `getAvailableItems()` - events are only sent from `requestPurchase()`
+- Removed polling logic from subscription status monitoring for cleaner code
+- Updated to comply with OpenIAP v1.1.1 specification
+
 ## [2.8.7] - 2025-09-03
 
 ### Added
