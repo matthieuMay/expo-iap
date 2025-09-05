@@ -114,7 +114,6 @@ func serializeTransaction(_ transaction: Transaction, jwsRepresentationIOS: Stri
         if let currency = jsonData["currency"] as? String {
             purchaseMap["currencyCodeIOS"] = currency
             
-            // Try to get currency symbol from locale
             let locale = Locale(identifier: Locale.identifier(fromComponents: [NSLocale.Key.currencyCode.rawValue: currency]))
             purchaseMap["currencySymbolIOS"] = locale.currencySymbol
             
@@ -123,7 +122,6 @@ func serializeTransaction(_ transaction: Transaction, jwsRepresentationIOS: Stri
             purchaseMap["currencyIOS"] = currency
             // END: Deprecated - will be removed in v2.9.0
         }
-        // Extract country code from storefront if available
         if let storefront = jsonData["storefront"] as? String {
             purchaseMap["countryCodeIOS"] = storefront
         }
@@ -178,10 +176,8 @@ func serializeSubscription(_ s: Product.SubscriptionInfo?) -> [String: Any?]? {
 
 @available(iOS 15.0, *)
 func serializeProduct(_ p: Product) -> [String: Any?] {
-    // Convert Product.ProductType to our expected 'inapp' or 'subs' string
     let productType: String = p.subscription != nil ? "subs" : "inapp"
     
-    // For subscription products, add discounts and introductory price
     var discounts: [[String: Any?]]? = nil
     var introductoryPrice: String? = nil
     var introductoryPriceAsAmountIOS: String? = nil
@@ -192,7 +188,6 @@ func serializeProduct(_ p: Product) -> [String: Any?] {
     var subscriptionPeriodUnitIOS: String? = nil
     
     if let subscription = p.subscription {
-        // Extract discount information from promotional offers
         if !subscription.promotionalOffers.isEmpty {
             discounts = subscription.promotionalOffers.compactMap { offer in
                 return [
@@ -207,7 +202,6 @@ func serializeProduct(_ p: Product) -> [String: Any?] {
             }
         }
         
-        // Extract introductory price from introductory offer
         if let introOffer = subscription.introductoryOffer {
             introductoryPrice = introOffer.displayPrice
             introductoryPriceAsAmountIOS = "\(introOffer.price)"
@@ -216,7 +210,6 @@ func serializeProduct(_ p: Product) -> [String: Any?] {
             introductoryPriceSubscriptionPeriodIOS = getPeriodIOS(introOffer.period.unit)
         }
         
-        // Extract subscription period information
         subscriptionPeriodNumberIOS = "\(subscription.subscriptionPeriod.value)"
         subscriptionPeriodUnitIOS = getPeriodIOS(subscription.subscriptionPeriod.unit)
     }
@@ -224,7 +217,6 @@ func serializeProduct(_ p: Product) -> [String: Any?] {
     return [
         "debugDescription": serializeDebug(p.debugDescription),
         "description": p.description,
-        // New iOS-suffixed fields
         "displayNameIOS": p.displayName,
         "discountsIOS": discounts,
         "introductoryPriceIOS": introductoryPrice,
@@ -308,13 +300,11 @@ public class ExpoIapModule: Module {
     private var productStore: ProductStore?
     private var hasListeners = false
     private var updateListenerTask: Task<Void, Error>?
-    private var subscriptionPollingTask: Task<Void, Error>?
-    private var pollingSkus: Set<String> = []
     private var paymentObserver: PaymentObserver?
     private var promotedPayment: SKPayment?
     private var promotedProduct: SKProduct?
     
-    // Add a flag to track initialization state
+    private let subscriptionChangePropagationDelay: UInt64 = 1_500_000_000 // 1.5 seconds in nanoseconds
     private var isInitialized = false
 
     public func definition() -> ModuleDefinition {
@@ -337,13 +327,10 @@ public class ExpoIapModule: Module {
         }
 
         Function("initConnection") { () -> Bool in
-            // Clean up any existing state first (important for hot reload)
             self.cleanupExistingState()
             
-            // Initialize fresh state
             self.productStore = ProductStore()
             
-            // Set up PaymentObserver for promoted products
             if self.paymentObserver == nil {
                 self.paymentObserver = PaymentObserver(module: self)
                 SKPaymentQueue.default().add(self.paymentObserver!)
@@ -416,7 +403,6 @@ public class ExpoIapModule: Module {
                 return nil
             }
             
-            // Convert SKProduct to dictionary
             return [
                 "productIdentifier": product.productIdentifier,
                 "localizedTitle": product.localizedTitle,
@@ -439,10 +425,8 @@ public class ExpoIapModule: Module {
                 )
             }
             
-            // Add the deferred payment to the queue
             SKPaymentQueue.default().add(payment)
             
-            // Clear the promoted product data
             self.promotedPayment = nil
             self.promotedProduct = nil
         }
@@ -504,80 +488,26 @@ public class ExpoIapModule: Module {
             func addTransaction(transaction: Transaction, jwsRepresentationIOS: String? = nil) {
                 let serialized = serializeTransaction(transaction, jwsRepresentationIOS: jwsRepresentationIOS)
                 purchasedItemsSerialized.append(serialized)
-                
-                if alsoPublishToEventListenerIOS {
-                    self.sendEvent(IapEvent.PurchaseUpdated, serialized)
-                }
             }
 
-            for await verification in onlyIncludeActiveItemsIOS
-                ? Transaction.currentEntitlements : Transaction.all
-            {
-                do {
-                    let transaction = try self.checkVerified(verification)
-                    if !onlyIncludeActiveItemsIOS {
+            if onlyIncludeActiveItemsIOS {
+                for await verification in Transaction.currentEntitlements {
+                    do {
+                        let transaction = try self.checkVerified(verification)
+                        if await self.productStore?.getProduct(productID: transaction.productID) != nil {
+                            addTransaction(transaction: transaction, jwsRepresentationIOS: verification.jwsRepresentation)
+                        }
+                    } catch {
+                        print("[ExpoIapModule] Failed to verify transaction: \(error)")
+                    }
+                }
+            } else {
+                for await verification in Transaction.all {
+                    do {
+                        let transaction = try self.checkVerified(verification)
                         addTransaction(transaction: transaction, jwsRepresentationIOS: verification.jwsRepresentation)
-                        continue
-                    }
-                    switch transaction.productType {
-                    case .nonConsumable, .autoRenewable, .consumable:
-                        if await self.productStore?.getProduct(productID: transaction.productID)
-                            != nil
-                        {
-                            // For auto-renewable subscriptions, check if still active
-                            if transaction.productType == .autoRenewable {
-                                // Check if the subscription is still active by verifying expiration date
-                                if let expirationDate = transaction.expirationDate {
-                                    let currentDate = Date()
-                                    if currentDate < expirationDate {
-                                        addTransaction(transaction: transaction, jwsRepresentationIOS: verification.jwsRepresentation)
-                                    }
-                                    // Skip expired subscriptions
-                                } else {
-                                    // No expiration date means it might be a lifetime subscription or error
-                                    // Include it to be safe
-                                    addTransaction(transaction: transaction, jwsRepresentationIOS: verification.jwsRepresentation)
-                                }
-                            } else {
-                                // Non-consumable and consumable products don't expire
-                                addTransaction(transaction: transaction, jwsRepresentationIOS: verification.jwsRepresentation)
-                            }
-                        }
-                    case .nonRenewable:
-                        if await self.productStore?.getProduct(productID: transaction.productID)
-                            != nil
-                        {
-                            let currentDate = Date()
-                            let expirationDate = Calendar(identifier: .gregorian).date(
-                                byAdding: DateComponents(year: 1), to: transaction.purchaseDate)!
-                            if currentDate < expirationDate {
-                                addTransaction(transaction: transaction, jwsRepresentationIOS: verification.jwsRepresentation)
-                            }
-                        }
-                    default:
-                        break
-                    }
-                } catch StoreError.failedVerification {
-                    let err = [
-                        "responseCode": IapErrorCode.transactionValidationFailed,
-                        "debugMessage": StoreError.failedVerification.localizedDescription,
-                        "code": IapErrorCode.transactionValidationFailed,
-                        "message": StoreError.failedVerification.localizedDescription,
-                        "productId": "unknown",
-                    ]
-                    if alsoPublishToEventListenerIOS {
-                        self.sendEvent(IapEvent.PurchaseError, err)
-                    }
-                } catch {
-                    let err = [
-                        "responseCode": IapErrorCode.unknown,
-                        "debugMessage": error.localizedDescription,
-                        "code": IapErrorCode.unknown,
-                        "message": error.localizedDescription,
-                        "productId": "unknown",
-                    ]
-                    if alsoPublishToEventListenerIOS {
-                        self.sendEvent(IapEvent.PurchaseError, err)
+                    } catch {
+                        print("[ExpoIapModule] Failed to verify transaction: \(error)")
                     }
                 }
             }
@@ -648,7 +578,6 @@ public class ExpoIapModule: Module {
                     case .success(let verification):
                         let transaction = try self.checkVerified(verification)
                         
-                        // Debug: Log JWS representation
                         let jwsRepresentation = verification.jwsRepresentation
                         if !jwsRepresentation.isEmpty {
                             logDebug("buyProduct JWS: exists")
@@ -664,7 +593,6 @@ public class ExpoIapModule: Module {
                             self.transactions[String(transaction.id)] = transaction
                             let serialized = serializeTransaction(transaction, jwsRepresentationIOS: verification.jwsRepresentation)
                             
-                            // Debug: Check if jwsRepresentationIOS is included in serialized result
                             logDebug("buyProduct serialized includes JWS: \(serialized["jwsRepresentationIOS"] != nil)")
                             
                             self.sendEvent(IapEvent.PurchaseUpdated, serialized)
@@ -706,15 +634,12 @@ public class ExpoIapModule: Module {
                         throw error
                     }
                     
-                    // Map StoreKit errors to proper error codes
                     var errorCode = IapErrorCode.purchaseError
                     var errorMessage = error.localizedDescription
                     
-                    // Check for specific StoreKit error types
                     if let nsError = error as NSError? {
                         switch nsError.domain {
                         case "SKErrorDomain":
-                            // Handle SKError codes
                             switch nsError.code {
                             case 0: // SKError.unknown
                                 errorCode = IapErrorCode.unknown
@@ -883,19 +808,76 @@ public class ExpoIapModule: Module {
             #endif
         }
 
-        AsyncFunction("showManageSubscriptionsIOS") { () -> Bool in
+        AsyncFunction("showManageSubscriptionsIOS") { () -> [[String: Any?]] in
             #if !os(tvOS)
                 guard let windowScene = await self.currentWindowScene() else {
                     throw Exception(name: "ExpoIapModule", description: "Cannot find window scene or not available on macOS", code: IapErrorCode.serviceError)
                 }
-                // Get all subscription products before showing the management UI
+                
+                var beforeStatuses: [String: Bool] = [:]
                 let subscriptionSkus = await self.getAllSubscriptionProductIds()
-                self.pollingSkus = Set(subscriptionSkus)
-                // Show the management UI
+                
+                for sku in subscriptionSkus {
+                    if let product = await self.productStore?.getProduct(productID: sku),
+                       let subscription = product.subscription {
+                        do {
+                            let statuses = try await subscription.status
+                            if let s = statuses.first(where: { status in
+                                if case .verified(let info) = status.renewalInfo {
+                                    return info.currentProductID == sku
+                                }
+                                return false
+                            }) {
+                                var willAutoRenew = false
+                                if case .verified(let info) = s.renewalInfo {
+                                    willAutoRenew = info.willAutoRenew
+                                }
+                                beforeStatuses[sku] = willAutoRenew
+                            }
+                        } catch {
+                            // ignore
+                        }
+                    }
+                }
+                
                 try await AppStore.showManageSubscriptions(in: windowScene)
-                // Start polling for status changes
-                self.pollForSubscriptionStatusChanges()
-                return true
+                
+                try? await Task.sleep(nanoseconds: subscriptionChangePropagationDelay)
+                
+                var updatedSubscriptions: [[String: Any?]] = []
+                
+                for sku in subscriptionSkus {
+                    if let product = await self.productStore?.getProduct(productID: sku),
+                       let subscription = product.subscription,
+                       let result = await product.latestTransaction {
+                        let statuses = try? await subscription.status
+                        let matchedStatus = statuses?.first(where: { status in
+                            if case .verified(let info) = status.renewalInfo {
+                                return info.currentProductID == sku
+                            }
+                            return false
+                        })
+                        
+                        var currentWillAutoRenew = false
+                        if let s = matchedStatus, case .verified(let info) = s.renewalInfo {
+                            currentWillAutoRenew = info.willAutoRenew
+                        }
+                        
+                        let previousWillAutoRenew = beforeStatuses[sku] ?? false
+                        if previousWillAutoRenew != currentWillAutoRenew {
+                            do {
+                                let transaction = try self.checkVerified(result)
+                                var purchaseMap = serializeTransaction(transaction, jwsRepresentationIOS: result.jwsRepresentation)
+                                purchaseMap["willAutoRenewIOS"] = currentWillAutoRenew
+                                updatedSubscriptions.append(purchaseMap)
+                            } catch {
+                                print("[ExpoIapModule] Failed to verify subscription change: \(error)")
+                            }
+                        }
+                    }
+                }
+                
+                return updatedSubscriptions
             #else
                 throw Exception(name: "ExpoIapModule", description: "This method is not available on tvOS", code: IapErrorCode.serviceError)
             #endif
@@ -1054,12 +1036,8 @@ public class ExpoIapModule: Module {
         updateListenerTask?.cancel()
         updateListenerTask = nil
         
-        subscriptionPollingTask?.cancel()
-        subscriptionPollingTask = nil
-        
         // Clear collections
         transactions.removeAll()
-        pollingSkus.removeAll()
         
         // Reset promoted products
         promotedPayment = nil
@@ -1155,71 +1133,6 @@ public class ExpoIapModule: Module {
         }
     }
 
-    private func pollForSubscriptionStatusChanges() {
-        subscriptionPollingTask?.cancel()
-        subscriptionPollingTask = Task {
-            try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
-            
-            var previousStatuses: [String: Bool] = [:] // Track auto-renewal state with Bool
-            
-            for sku in self.pollingSkus {
-                guard let product = await self.productStore?.getProduct(productID: sku),
-                      let status = try? await product.subscription?.status.first else { continue }
-                
-                // Track willAutoRenew as a bool value
-                var willAutoRenew = false
-                if case .verified(let info) = status.renewalInfo {
-                    willAutoRenew = info.willAutoRenew
-                }
-                previousStatuses[sku] = willAutoRenew
-            }
-
-            for _ in 1...5 {
-                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-                if Task.isCancelled {
-                    return
-                }
-                
-                for sku in self.pollingSkus {
-                    guard let product = await self.productStore?.getProduct(productID: sku),
-                          let status = try? await product.subscription?.status.first,
-                          let result = await product.latestTransaction else { continue }
-                    // Try to verify the transaction
-                    let transaction: Transaction
-                    do {
-                        transaction = try self.checkVerified(result)
-                    } catch {
-                        continue // Skip if verification fails
-                    }
-                    
-                    // Track current auto-renewal state
-                    var currentWillAutoRenew = false
-                    if case .verified(let info) = status.renewalInfo {
-                        currentWillAutoRenew = info.willAutoRenew
-                    }
-                    
-                    // Compare with previous state
-                    if let previousWillAutoRenew = previousStatuses[sku], 
-                       previousWillAutoRenew != currentWillAutoRenew {
-                        
-                        // Use the jwsRepresentation when serializing the transaction
-                        var purchaseMap = serializeTransaction(transaction, jwsRepresentationIOS: result.jwsRepresentation)
-                        
-                        if case .verified(let renewalInfo) = status.renewalInfo {
-                            if let renewalInfoDict = serializeRenewalInfo(.verified(renewalInfo)) {
-                                purchaseMap["renewalInfo"] = renewalInfoDict
-                            }
-                        }
-                        
-                        self.sendEvent(IapEvent.PurchaseUpdated, purchaseMap)
-                        previousStatuses[sku] = currentWillAutoRenew
-                    }
-                }
-            }
-            self.pollingSkus.removeAll()
-        }
-    }
-    
     private func getReceiptDataInternal() throws -> String {
         if let appStoreReceiptURL = Bundle.main.appStoreReceiptURL,
            FileManager.default.fileExists(atPath: appStoreReceiptURL.path) {
