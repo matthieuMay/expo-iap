@@ -9,21 +9,16 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import {
-  useIAP,
-  Purchase,
-  PurchaseError,
-} from 'expo-iap';
+import {useIAP, PurchaseError} from 'expo-iap';
+import {SUBSCRIPTION_PRODUCT_IDS} from '../../src/utils/constants';
+
+// Centralized subscription IDs
+const subscriptionIds = SUBSCRIPTION_PRODUCT_IDS;
 
 export default function AvailablePurchases() {
   const [loading, setLoading] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
-  
-  // Define subscription IDs at component level like in the working example
-  const subscriptionIds = [
-    'dev.hyo.martie.premium', // Same as subscription-flow
-  ];
-  
+
   // Use the useIAP hook like subscription-flow does
   const {
     connected,
@@ -37,13 +32,13 @@ export default function AvailablePurchases() {
   } = useIAP({
     onPurchaseSuccess: async (purchase) => {
       console.log('[AVAILABLE-PURCHASES] Purchase successful:', purchase);
-      
+
       // Finish transaction like in subscription-flow
       await finishTransaction({
         purchase,
         isConsumable: false,
       });
-      
+
       // Refresh status after success
       setTimeout(() => {
         checkSubscriptionStatus();
@@ -58,18 +53,25 @@ export default function AvailablePurchases() {
   // Check subscription status like subscription-flow does
   const checkSubscriptionStatus = useCallback(async () => {
     if (!connected || isCheckingStatus) {
-      console.log('[AVAILABLE-PURCHASES] Skipping subscription status check - not connected or already checking');
+      console.log(
+        '[AVAILABLE-PURCHASES] Skipping subscription status check - not connected or already checking',
+      );
       return;
     }
-    
+
     console.log('[AVAILABLE-PURCHASES] Checking subscription status...');
     setIsCheckingStatus(true);
     try {
       const subs = await getActiveSubscriptions();
       console.log('[AVAILABLE-PURCHASES] Active subscriptions result:', subs);
     } catch (error) {
-      console.error('[AVAILABLE-PURCHASES] Error checking subscription status:', error);
-      console.warn('[AVAILABLE-PURCHASES] Subscription status check failed, but existing state preserved');
+      console.error(
+        '[AVAILABLE-PURCHASES] Error checking subscription status:',
+        error,
+      );
+      console.warn(
+        '[AVAILABLE-PURCHASES] Subscription status check failed, but existing state preserved',
+      );
     } finally {
       setIsCheckingStatus(false);
     }
@@ -77,7 +79,7 @@ export default function AvailablePurchases() {
 
   const handleGetAvailablePurchases = async () => {
     if (!connected) return;
-    
+
     setLoading(true);
     try {
       console.log('Loading available purchases...');
@@ -94,15 +96,22 @@ export default function AvailablePurchases() {
   // Load products and available purchases when connected - follow subscription-flow pattern
   useEffect(() => {
     if (connected) {
-      console.log('[AVAILABLE-PURCHASES] Connected to store, loading subscription products...');
+      console.log(
+        '[AVAILABLE-PURCHASES] Connected to store, loading subscription products...',
+      );
       // Request products first - this is event-based, not promise-based
-      requestProducts({ skus: subscriptionIds, type: 'subs' });
-      console.log('[AVAILABLE-PURCHASES] Product loading request sent - waiting for results...');
-      
+      requestProducts({skus: subscriptionIds, type: 'subs'});
+      console.log(
+        '[AVAILABLE-PURCHASES] Product loading request sent - waiting for results...',
+      );
+
       // Then load available purchases
       console.log('[AVAILABLE-PURCHASES] Loading available purchases...');
-      getAvailablePurchases([]).catch(error => {
-        console.warn('[AVAILABLE-PURCHASES] Failed to load available purchases:', error);
+      getAvailablePurchases([]).catch((error) => {
+        console.warn(
+          '[AVAILABLE-PURCHASES] Failed to load available purchases:',
+          error,
+        );
       });
     }
   }, [connected, requestProducts, getAvailablePurchases]);
@@ -114,7 +123,7 @@ export default function AvailablePurchases() {
       const timer = setTimeout(() => {
         checkSubscriptionStatus();
       }, 500);
-      
+
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -122,15 +131,27 @@ export default function AvailablePurchases() {
 
   // Track state changes for debugging
   useEffect(() => {
-    console.log('[AVAILABLE-PURCHASES] availablePurchases:', availablePurchases.length, 'items');
+    console.log(
+      '[AVAILABLE-PURCHASES] availablePurchases:',
+      availablePurchases.length,
+      'items',
+    );
   }, [availablePurchases]);
 
   useEffect(() => {
-    console.log('[AVAILABLE-PURCHASES] activeSubscriptions:', activeSubscriptions.length, activeSubscriptions);
+    console.log(
+      '[AVAILABLE-PURCHASES] activeSubscriptions:',
+      activeSubscriptions.length,
+      activeSubscriptions,
+    );
   }, [activeSubscriptions]);
-  
+
   useEffect(() => {
-    console.log('[AVAILABLE-PURCHASES] subscriptions (products):', subscriptions.length, subscriptions);
+    console.log(
+      '[AVAILABLE-PURCHASES] subscriptions (products):',
+      subscriptions.length,
+      subscriptions,
+    );
   }, [subscriptions]);
 
   return (
@@ -145,39 +166,59 @@ export default function AvailablePurchases() {
       {activeSubscriptions.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🔄 Active Subscriptions</Text>
-          <Text style={styles.subtitle}>Currently active subscription services</Text>
-          
+          <Text style={styles.subtitle}>
+            Currently active subscription services
+          </Text>
+
           {activeSubscriptions.map((subscription, index) => (
-            <View key={subscription.productId + index} style={[styles.purchaseItem, styles.activeSubscriptionItem]}>
+            <View
+              key={subscription.productId + index}
+              style={[styles.purchaseItem, styles.activeSubscriptionItem]}
+            >
               <View style={styles.purchaseHeader}>
                 <Text style={styles.productId}>{subscription.productId}</Text>
                 <View style={styles.statusBadge}>
                   <Text style={styles.statusBadgeText}>✅ Active</Text>
                 </View>
               </View>
-              
+
               <View style={styles.purchaseDetails}>
                 {subscription.expirationDateIOS && (
                   <View style={styles.purchaseRow}>
                     <Text style={styles.label}>Expires:</Text>
-                    <Text style={[styles.value, subscription.willExpireSoon && styles.expiredText]}>
-                      {new Date(subscription.expirationDateIOS).toLocaleDateString()}
+                    <Text
+                      style={[
+                        styles.value,
+                        subscription.willExpireSoon && styles.expiredText,
+                      ]}
+                    >
+                      {new Date(
+                        subscription.expirationDateIOS,
+                      ).toLocaleDateString()}
                       {subscription.willExpireSoon && ' (Soon)'}
                     </Text>
                   </View>
                 )}
-                
+
                 {subscription.environmentIOS && (
                   <View style={styles.purchaseRow}>
                     <Text style={styles.label}>Environment:</Text>
-                    <Text style={styles.value}>{subscription.environmentIOS}</Text>
+                    <Text style={styles.value}>
+                      {subscription.environmentIOS}
+                    </Text>
                   </View>
                 )}
-                
+
                 {subscription.daysUntilExpirationIOS !== undefined && (
                   <View style={styles.purchaseRow}>
                     <Text style={styles.label}>Days Left:</Text>
-                    <Text style={[styles.value, subscription.daysUntilExpirationIOS <= 3 && styles.expiredText]}>
+                    <Text
+                      style={[
+                        styles.value,
+                        subscription.daysUntilExpirationIOS <= 3 &&
+                          styles.expiredText,
+                      ]}
+                    >
                       {subscription.daysUntilExpirationIOS} days
                     </Text>
                   </View>
@@ -191,12 +232,16 @@ export default function AvailablePurchases() {
       {/* Available Purchases Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>📋 Purchase History</Text>
-        <Text style={styles.subtitle}>Past purchases and subscription transactions</Text>
+        <Text style={styles.subtitle}>
+          Past purchases and subscription transactions
+        </Text>
 
         {availablePurchases.length === 0 && activeSubscriptions.length === 0 ? (
           <Text style={styles.emptyText}>No purchase history found</Text>
         ) : availablePurchases.length === 0 ? (
-          <Text style={styles.emptyText}>No historical purchases found (active subscriptions shown above)</Text>
+          <Text style={styles.emptyText}>
+            No historical purchases found (active subscriptions shown above)
+          </Text>
         ) : (
           availablePurchases.map((purchase, index) => (
             <View key={purchase.productId + index} style={styles.purchaseItem}>
@@ -222,43 +267,70 @@ export default function AvailablePurchases() {
                   <Text style={styles.value}>{purchase.transactionId}</Text>
                 </View>
               )}
-              
+
               {/* iOS-specific fields with new IOS naming convention */}
-              {Platform.OS === 'ios' && 'expirationDateIOS' in purchase && purchase.expirationDateIOS && (
-                <View style={styles.purchaseRow}>
-                  <Text style={styles.label}>Expires:</Text>
-                  <Text style={[styles.value, purchase.expirationDateIOS < Date.now() && styles.expiredText]}>
-                    {new Date(purchase.expirationDateIOS).toLocaleDateString()}
-                    {purchase.expirationDateIOS < Date.now() ? ' (Expired)' : ''}
-                  </Text>
-                </View>
-              )}
-              
-              {Platform.OS === 'ios' && 'environmentIOS' in purchase && purchase.environmentIOS && (
-                <View style={styles.purchaseRow}>
-                  <Text style={styles.label}>Environment:</Text>
-                  <Text style={styles.value}>{purchase.environmentIOS}</Text>
-                </View>
-              )}
-              
-              {Platform.OS === 'ios' && 'originalTransactionDateIOS' in purchase && purchase.originalTransactionDateIOS && (
-                <View style={styles.purchaseRow}>
-                  <Text style={styles.label}>Original Date:</Text>
-                  <Text style={styles.value}>
-                    {new Date(purchase.originalTransactionDateIOS).toLocaleDateString()}
-                  </Text>
-                </View>
-              )}
+              {Platform.OS === 'ios' &&
+                'expirationDateIOS' in purchase &&
+                purchase.expirationDateIOS && (
+                  <View style={styles.purchaseRow}>
+                    <Text style={styles.label}>Expires:</Text>
+                    <Text
+                      style={[
+                        styles.value,
+                        purchase.expirationDateIOS < Date.now() &&
+                          styles.expiredText,
+                      ]}
+                    >
+                      {new Date(
+                        purchase.expirationDateIOS,
+                      ).toLocaleDateString()}
+                      {purchase.expirationDateIOS < Date.now()
+                        ? ' (Expired)'
+                        : ''}
+                    </Text>
+                  </View>
+                )}
+
+              {Platform.OS === 'ios' &&
+                'environmentIOS' in purchase &&
+                purchase.environmentIOS && (
+                  <View style={styles.purchaseRow}>
+                    <Text style={styles.label}>Environment:</Text>
+                    <Text style={styles.value}>{purchase.environmentIOS}</Text>
+                  </View>
+                )}
+
+              {Platform.OS === 'ios' &&
+                'originalTransactionDateIOS' in purchase &&
+                purchase.originalTransactionDateIOS && (
+                  <View style={styles.purchaseRow}>
+                    <Text style={styles.label}>Original Date:</Text>
+                    <Text style={styles.value}>
+                      {new Date(
+                        purchase.originalTransactionDateIOS,
+                      ).toLocaleDateString()}
+                    </Text>
+                  </View>
+                )}
 
               {/* Android-specific fields */}
-              {Platform.OS === 'android' && 'autoRenewingAndroid' in purchase && purchase.autoRenewingAndroid !== undefined && (
-                <View style={styles.purchaseRow}>
-                  <Text style={styles.label}>Auto Renewing:</Text>
-                  <Text style={[styles.value, purchase.autoRenewingAndroid ? styles.activeText : styles.expiredText]}>
-                    {purchase.autoRenewingAndroid ? '✅ Yes' : '❌ No'}
-                  </Text>
-                </View>
-              )}
+              {Platform.OS === 'android' &&
+                'autoRenewingAndroid' in purchase &&
+                purchase.autoRenewingAndroid !== undefined && (
+                  <View style={styles.purchaseRow}>
+                    <Text style={styles.label}>Auto Renewing:</Text>
+                    <Text
+                      style={[
+                        styles.value,
+                        purchase.autoRenewingAndroid
+                          ? styles.activeText
+                          : styles.expiredText,
+                      ]}
+                    >
+                      {purchase.autoRenewingAndroid ? '✅ Yes' : '❌ No'}
+                    </Text>
+                  </View>
+                )}
             </View>
           ))
         )}
