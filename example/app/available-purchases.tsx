@@ -27,7 +27,7 @@ export default function AvailablePurchases() {
     activeSubscriptions,
     getAvailablePurchases,
     getActiveSubscriptions,
-    requestProducts,
+    fetchProducts,
     finishTransaction,
   } = useIAP({
     onPurchaseSuccess: async (purchase) => {
@@ -100,7 +100,7 @@ export default function AvailablePurchases() {
         '[AVAILABLE-PURCHASES] Connected to store, loading subscription products...',
       );
       // Request products first - this is event-based, not promise-based
-      requestProducts({skus: subscriptionIds, type: 'subs'});
+      fetchProducts({skus: subscriptionIds, type: 'subs'});
       console.log(
         '[AVAILABLE-PURCHASES] Product loading request sent - waiting for results...',
       );
@@ -114,7 +114,7 @@ export default function AvailablePurchases() {
         );
       });
     }
-  }, [connected, requestProducts, getAvailablePurchases]);
+  }, [connected, fetchProducts, getAvailablePurchases]);
 
   // Check subscription status separately like subscription-flow does
   useEffect(() => {

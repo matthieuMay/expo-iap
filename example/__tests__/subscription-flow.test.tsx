@@ -8,7 +8,7 @@ jest.spyOn(Alert, 'alert');
 
 // Mock the functions
 const mockInitConnection = jest.fn().mockResolvedValue(true);
-const mockRequestProducts = jest.fn();
+const mockFetchProducts = jest.fn();
 const mockRequestPurchase = jest.fn();
 const mockFinishTransaction = jest.fn();
 const mockGetActiveSubscriptions = jest.fn();
@@ -58,7 +58,7 @@ const createMockAndroidSubscription = () => ({
 const mockUseIAP = jest.fn();
 jest.mock('../../src', () => ({
   initConnection: mockInitConnection,
-  requestProducts: mockRequestProducts,
+  requestProducts: jest.fn(),
   requestPurchase: mockRequestPurchase,
   useIAP: () => mockUseIAP(),
 }));
@@ -66,7 +66,7 @@ jest.mock('../../src', () => ({
 describe('SubscriptionFlow Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockRequestProducts.mockResolvedValue([createMockSubscription()]);
+    mockFetchProducts.mockResolvedValue([createMockSubscription()]);
     mockGetActiveSubscriptions.mockResolvedValue([]);
     mockFinishTransaction.mockResolvedValue(undefined);
     mockGetAvailablePurchases.mockResolvedValue([]);
@@ -76,7 +76,7 @@ describe('SubscriptionFlow Component', () => {
       connected: true,
       subscriptions: [createMockSubscription()],
       availablePurchases: [],
-      requestProducts: mockRequestProducts,
+      fetchProducts: mockFetchProducts,
       getAvailablePurchases: mockGetAvailablePurchases,
       finishTransaction: mockFinishTransaction,
       getActiveSubscriptions: mockGetActiveSubscriptions,
@@ -108,14 +108,13 @@ describe('SubscriptionFlow Component', () => {
     
     fireEvent.press(subscribeButton);
     
-    // The actual implementation uses the useIAP hook's internal function
-    // so we check if requestProducts was called on mount instead
-    expect(mockRequestProducts).toHaveBeenCalled();
+    // The actual implementation triggers product fetch on mount
+    expect(mockFetchProducts).toHaveBeenCalled();
   });
 
   it('should call requestProducts on mount', () => {
     render(<SubscriptionFlow />);
-    expect(mockRequestProducts).toHaveBeenCalled();
+    expect(mockFetchProducts).toHaveBeenCalled();
   });
 
   it('should display active subscriptions when available', () => {
@@ -132,7 +131,7 @@ describe('SubscriptionFlow Component', () => {
       connected: true,
       subscriptions: [createMockSubscription()],
       availablePurchases: [],
-      requestProducts: mockRequestProducts,
+      fetchProducts: mockFetchProducts,
       getAvailablePurchases: mockGetAvailablePurchases,
       finishTransaction: mockFinishTransaction,
       getActiveSubscriptions: mockGetActiveSubscriptions,
@@ -158,7 +157,7 @@ describe('SubscriptionFlow Component', () => {
       connected: true,
       subscriptions: [createMockSubscription()],
       availablePurchases: [],
-      requestProducts: mockRequestProducts,
+      fetchProducts: mockFetchProducts,
       getAvailablePurchases: mockGetAvailablePurchases,
       finishTransaction: mockFinishTransaction,
       getActiveSubscriptions: mockGetActiveSubscriptions,
@@ -187,7 +186,7 @@ describe('SubscriptionFlow Component', () => {
       connected: true,
       subscriptions: [createMockAndroidSubscription()],
       availablePurchases: [],
-      requestProducts: mockRequestProducts,
+      fetchProducts: mockFetchProducts,
       getAvailablePurchases: mockGetAvailablePurchases,
       finishTransaction: mockFinishTransaction,
       getActiveSubscriptions: mockGetActiveSubscriptions,
@@ -204,7 +203,7 @@ describe('SubscriptionFlow Component', () => {
       connected: true,
       subscriptions: [createMockSubscription()],
       availablePurchases: [],
-      requestProducts: mockRequestProducts,
+      fetchProducts: mockFetchProducts,
       getAvailablePurchases: mockGetAvailablePurchases,
       finishTransaction: mockFinishTransaction,
       getActiveSubscriptions: mockGetActiveSubscriptions,
@@ -226,7 +225,7 @@ describe('SubscriptionFlow Component', () => {
       connected: true,
       subscriptions: [],
       availablePurchases: [],
-      requestProducts: mockRequestProducts,
+      fetchProducts: mockFetchProducts,
       getAvailablePurchases: mockGetAvailablePurchases,
       finishTransaction: mockFinishTransaction,
       getActiveSubscriptions: mockGetActiveSubscriptions,
@@ -243,7 +242,7 @@ describe('SubscriptionFlow Component', () => {
       connected: true,
       subscriptions: [],
       availablePurchases: [],
-      requestProducts: mockRequestProducts,
+      fetchProducts: mockFetchProducts,
       getAvailablePurchases: mockGetAvailablePurchases,
       finishTransaction: mockFinishTransaction,
       getActiveSubscriptions: mockGetActiveSubscriptions,
@@ -254,7 +253,7 @@ describe('SubscriptionFlow Component', () => {
     const retryButton = getByText('Retry');
     
     fireEvent.press(retryButton);
-    expect(mockRequestProducts).toHaveBeenCalledWith({
+    expect(mockFetchProducts).toHaveBeenCalledWith({
       skus: ['dev.hyo.martie.premium'],
       type: 'subs',
     });
@@ -265,7 +264,7 @@ describe('SubscriptionFlow Component', () => {
       connected: false,
       subscriptions: [],
       availablePurchases: [],
-      requestProducts: mockRequestProducts,
+      fetchProducts: mockFetchProducts,
       getAvailablePurchases: mockGetAvailablePurchases,
       finishTransaction: mockFinishTransaction,
       getActiveSubscriptions: mockGetActiveSubscriptions,
@@ -292,7 +291,7 @@ describe('SubscriptionFlow Component', () => {
       connected: true,
       subscriptions: [createMockSubscription()],
       availablePurchases: [],
-      requestProducts: mockRequestProducts,
+      fetchProducts: mockFetchProducts,
       getAvailablePurchases: mockGetAvailablePurchases,
       finishTransaction: mockFinishTransaction,
       getActiveSubscriptions: mockGetActiveSubscriptions,
@@ -311,7 +310,7 @@ describe('SubscriptionFlow Component', () => {
       connected: true,
       subscriptions: [createMockSubscription()],
       availablePurchases: [],
-      requestProducts: mockRequestProducts,
+      fetchProducts: mockFetchProducts,
       getAvailablePurchases: mockGetAvailablePurchases,
       finishTransaction: mockFinishTransaction,
       getActiveSubscriptions: mockGetActiveSubscriptions,

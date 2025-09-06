@@ -71,7 +71,7 @@ export default function SubscriptionFlow() {
     connected,
     subscriptions,
     availablePurchases,
-    requestProducts,
+    fetchProducts,
     getAvailablePurchases,
     finishTransaction,
     getActiveSubscriptions,
@@ -180,7 +180,7 @@ export default function SubscriptionFlow() {
       console.log('Connected to store, loading subscription products...');
       // requestProducts is event-based, not promise-based
       // Results will be available through the useIAP hook's subscriptions state
-      requestProducts({skus: subscriptionIds, type: 'subs'});
+      fetchProducts({skus: subscriptionIds, type: 'subs'});
       console.log('Product loading request sent - waiting for results...');
 
       // Load available purchases to check subscription history
@@ -189,7 +189,7 @@ export default function SubscriptionFlow() {
         console.warn('Failed to load available purchases:', error);
       });
     }
-  }, [connected, requestProducts, getAvailablePurchases]);
+  }, [connected, fetchProducts, getAvailablePurchases]);
 
   // Check subscription status separately to avoid infinite loop
   useEffect(() => {
@@ -263,7 +263,7 @@ export default function SubscriptionFlow() {
   };
 
   const retryLoadSubscriptions = () => {
-    requestProducts({skus: SUBSCRIPTION_PRODUCT_IDS, type: 'subs'});
+    fetchProducts({skus: SUBSCRIPTION_PRODUCT_IDS, type: 'subs'});
   };
 
   const getSubscriptionDisplayPrice = (
