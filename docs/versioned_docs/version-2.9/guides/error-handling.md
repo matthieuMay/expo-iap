@@ -26,10 +26,15 @@ Handle network connectivity issues gracefully:
 ```typescript
 import {useIAP} from 'expo-iap';
 
-const {purchaseProduct} = useIAP();
+const {requestPurchase} = useIAP();
 
 try {
-  await purchaseProduct('product_id');
+  await requestPurchase({
+    request: Platform.select({
+      ios: {sku: 'product_id'},
+      android: {skus: ['product_id']},
+    })!,
+  });
 } catch (error) {
   if (error.code === 'E_NETWORK_ERROR') {
     // Handle network issues

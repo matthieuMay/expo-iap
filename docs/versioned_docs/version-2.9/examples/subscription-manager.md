@@ -108,7 +108,7 @@ export default function SubscriptionManager() {
   const loadSubscriptions = async () => {
     try {
       setLoading(true);
-      await requestProducts({skus: SUBSCRIPTION_SKUS, type: 'subs'});
+      await fetchProducts({skus: SUBSCRIPTION_SKUS, type: 'subs'});
       console.log('Subscriptions loaded');
     } catch (error) {
       console.error('Failed to load subscriptions:', error);
@@ -120,8 +120,8 @@ export default function SubscriptionManager() {
 
   const checkSubscriptionStatus = async () => {
     try {
-      const purchases = await getAvailablePurchases();
-      const activeSubscription = findActiveSubscription(purchases);
+      await getAvailablePurchases();
+      const activeSubscription = findActiveSubscription(availablePurchases);
 
       if (activeSubscription) {
         const status = await validateSubscriptionStatus(activeSubscription);

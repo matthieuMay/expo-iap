@@ -248,8 +248,8 @@ const handlePurchaseError = (error) => {
 
     default:
       // Log for investigation
-      console.error('Purchase error:', error);**
-**      break;
+      console.error('Purchase error:', error);
+      break;
   }
 };
 ```

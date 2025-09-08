@@ -272,6 +272,8 @@ public class ExpoIapModule: Module {
                 "isValid": result.isValid,
                 "receiptData": result.receiptData,
                 "jwsRepresentation": result.jwsRepresentation,
+                // Populate unified purchaseToken for iOS as alias of JWS
+                "purchaseToken": result.jwsRepresentation,
                 "latestTransaction": result.latestTransaction.map { OpenIapSerialization.purchase($0) },
             ]
         }

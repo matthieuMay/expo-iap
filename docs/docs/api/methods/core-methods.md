@@ -128,7 +128,7 @@ const fetchStorefront = async () => {
 
 **Note:** This is useful for region-specific pricing, content, or features.
 
-## getAppTransaction()
+## getAppTransactionIOS()
 
 Gets app transaction information for iOS apps (iOS 16.0+). AppTransaction represents the initial purchase that unlocked the app, useful for premium apps or apps that were previously paid.
 
@@ -139,11 +139,11 @@ Gets app transaction information for iOS apps (iOS 16.0+). AppTransaction repres
 > - If built with older SDK versions, the method will throw an error
 
 ```tsx
-import {getAppTransaction} from 'expo-iap';
+import {getAppTransactionIOS} from 'expo-iap';
 
 const fetchAppTransaction = async () => {
   try {
-    const appTransaction = await getAppTransaction();
+    const appTransaction = await getAppTransactionIOS();
     if (appTransaction) {
       console.log('App Transaction ID:', appTransaction.appTransactionID);
       console.log(

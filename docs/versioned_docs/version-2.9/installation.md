@@ -16,7 +16,7 @@ Before installing Expo IAP, make sure you have:
 
 - React Native 0.64 or later, or Expo SDK 45 or later
 - Node.js 16 or later
-- iOS 12+ for iOS apps (iOS 15+ required for StoreKit 2 features)
+- iOS 13.4+ for iOS apps (iOS 15+ required for StoreKit 2 features)
 - Android API level 21+ for Android apps
 
 ## Package Installation

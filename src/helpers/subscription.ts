@@ -38,9 +38,8 @@ export const getActiveSubscriptions = async (
 
       // Check if this purchase has subscription-specific fields
       const hasSubscriptionFields =
-        ('expirationDateIOS' in purchase && purchase.expirationDateIOS) ||
-        'autoRenewingAndroid' in purchase ||
-        ('environmentIOS' in purchase && purchase.environmentIOS === 'Sandbox');
+        ('expirationDateIOS' in purchase && !!purchase.expirationDateIOS) ||
+        'autoRenewingAndroid' in purchase;
 
       if (!hasSubscriptionFields) {
         return false;

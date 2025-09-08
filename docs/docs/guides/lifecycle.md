@@ -50,7 +50,7 @@ export default function App() {
     if (connected) {
       console.log('Connected to store');
       // You can now safely call store methods
-      requestProducts({skus: ['product1', 'product2'], type: 'inapp'});
+      fetchProducts({skus: ['product1', 'product2'], type: 'inapp'});
     }
   }, [connected, requestProducts]);
 
@@ -227,7 +227,7 @@ function MyApp() {
 
   useEffect(() => {
     if (connected) {
-      requestProducts({skus: productIds, type: 'inapp'});
+      fetchProducts({skus: productIds, type: 'inapp'});
     }
   }, [connected]);
 

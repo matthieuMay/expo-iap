@@ -272,14 +272,16 @@ describe('iOS Module Functions', () => {
     });
 
     it('should call showManageSubscriptionsIOS', async () => {
+      const mockPurchases: any[] = [];
       (ExpoIapModule.showManageSubscriptionsIOS as jest.Mock).mockResolvedValue(
-        null,
+        mockPurchases,
       );
 
       const result = await showManageSubscriptionsIOS();
 
       expect(ExpoIapModule.showManageSubscriptionsIOS).toHaveBeenCalledTimes(1);
-      expect(result).toBeNull();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toEqual(mockPurchases);
     });
 
     it('should call getReceiptIOS', async () => {

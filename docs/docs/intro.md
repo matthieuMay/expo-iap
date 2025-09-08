@@ -71,7 +71,7 @@ Load your products when the store connects:
 useEffect(() => {
   if (connected) {
     // Fetch your products
-    requestProducts({skus: productIds, type: 'inapp'});
+    fetchProducts({skus: productIds, type: 'inapp'});
   }
 }, [connected]);
 ```
@@ -161,7 +161,7 @@ export default function SimpleStore() {
   const {
     connected,
     products,
-    requestProducts,
+    fetchProducts,
     requestPurchase,
     currentPurchase,
     finishTransaction,
@@ -171,7 +171,7 @@ export default function SimpleStore() {
 
   useEffect(() => {
     if (connected) {
-      requestProducts({skus: productIds, type: 'inapp'});
+      fetchProducts({skus: productIds, type: 'inapp'});
     }
   }, [connected]);
 

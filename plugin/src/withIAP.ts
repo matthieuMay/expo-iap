@@ -155,13 +155,18 @@ const withIap: ConfigPlugin<ExpoIapPluginOptions | void> = (
 
     // iOS: choose one path to avoid overlap
     if (options?.enableLocalDev || options?.localPath) {
-      const localPath =
-        options.localPath ||
-        '/Users/crossplatformkorea/Github/hyodotdev/openiap-apple';
-      logOnce(
-        `🔧 [expo-iap] Enabling local OpenIAP development at: ${localPath}`,
-      );
-      result = withLocalOpenIAP(result, {localPath});
+      if (!options?.localPath) {
+        WarningAggregator.addWarningIOS(
+          'expo-iap',
+          'enableLocalDev is true but no localPath provided. Skipping local OpenIAP integration.',
+        );
+      } else {
+        const localPath = path.resolve(options.localPath);
+        logOnce(
+          `🔧 [expo-iap] Enabling local OpenIAP development at: ${localPath}`,
+        );
+        result = withLocalOpenIAP(result, {localPath});
+      }
     } else {
       // Ensure iOS Podfile is set up to resolve public CocoaPods specs
       result = withIapIOS(result);

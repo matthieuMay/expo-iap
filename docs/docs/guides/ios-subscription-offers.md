@@ -56,7 +56,7 @@ type SubscriptionOffer = {
 ```typescript
 import {requestProducts} from 'expo-iap';
 
-const subscriptions = await requestProducts({
+const subscriptions = await fetchProducts({
   skus: ['com.example.premium'],
   type: 'subs',
 });
@@ -103,7 +103,7 @@ Use the `isEligibleForIntroOffer` property to check if a user can redeem an intr
 
 ```typescript
 const checkEligibility = async () => {
-  const subscriptions = await requestProducts({
+  const subscriptions = await fetchProducts({
     skus: ['com.example.premium'],
     type: 'subs',
   });

@@ -31,7 +31,8 @@ The iOS native module now:
 
 - All iOS IAP methods now handle hot reload correctly
 - No code changes needed - works automatically
-- Affects: `requestProducts()`, `getAvailablePurchases()`, `getPurchaseHistories()`, and all other StoreKit methods
+- Affects: `requestProducts()`, `getAvailablePurchases()`, and other StoreKit methods
+- Note: `getPurchaseHistories()` has been removed in 2.9. See the migration guide.
 
 ## Usage
 

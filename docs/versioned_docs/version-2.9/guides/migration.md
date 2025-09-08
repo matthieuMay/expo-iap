@@ -110,10 +110,9 @@ import {
 // After
 import {
   initConnection,
-  getProducts,
+  requestProducts,
   requestPurchase,
   useIAP,
-  // withIAPContext not needed
 } from 'expo-iap';
 ```
 

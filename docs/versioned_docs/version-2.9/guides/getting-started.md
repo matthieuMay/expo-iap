@@ -116,8 +116,9 @@ export default function App() {
   const {
     connected,
     products,
-    purchaseHistory,
-    requestProducts,
+    purchaseHistories,
+    currentPurchase,
+    fetchProducts,
     requestPurchase,
     finishTransaction,
   } = useIAP();
@@ -147,9 +148,13 @@ const productIds = [
 
 useEffect(() => {
   if (connected) {
-    requestProducts({skus: productIds, type: 'inapp'});
+    fetchProducts({
+      skus: ['com.example.product1', 'com.example.product2'],
+      type: 'inapp',
+    });
+    fetchProducts({skus: ['com.example.subscription1'], type: 'subs'});
   }
-}, [connected, requestProducts]);
+}, [connected, fetchProducts]);
 ```
 
 ### 3. Request a purchase

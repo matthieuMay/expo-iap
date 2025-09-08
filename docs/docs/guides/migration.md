@@ -262,11 +262,11 @@ The `IapEvent` enum has been renamed to `OpenIapEvent` to align with the OpenIAP
 
 ```tsx
 // ❌ Before v2.9.0
-import {IapEvent} from 'expo-iap';
+import {OpenIapEvent} from 'expo-iap';
 
 purchaseUpdatedListener((purchase) => {
   console.log('Purchase updated');
-}, IapEvent.PurchaseUpdated);
+}, OpenIapEvent.PurchaseUpdated);
 
 // ✅ After v2.9.0
 import {OpenIapEvent} from 'expo-iap';

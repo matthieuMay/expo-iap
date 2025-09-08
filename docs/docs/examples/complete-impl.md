@@ -44,8 +44,8 @@ useEffect(() => {
 
   const initializeStore = async () => {
     try {
-      await requestProducts({skus: productSkus, type: 'inapp'});
-      await requestProducts({skus: subscriptionSkus, type: 'subs'});
+      await fetchProducts({skus: productSkus, type: 'inapp'});
+      await fetchProducts({skus: subscriptionSkus, type: 'subs'});
     } catch (error) {
       console.error('Failed to initialize store:', error);
     }
@@ -246,8 +246,8 @@ export default function Store() {
 
       // Load both products and subscriptions
       await Promise.all([
-        requestProducts({skus: PRODUCT_IDS, type: 'inapp'}),
-        requestProducts({skus: SUBSCRIPTION_IDS, type: 'subs'}),
+        fetchProducts({skus: PRODUCT_IDS, type: 'inapp'}),
+        fetchProducts({skus: SUBSCRIPTION_IDS, type: 'subs'}),
       ]);
 
       console.log('Products loaded successfully');

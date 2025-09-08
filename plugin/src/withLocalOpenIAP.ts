@@ -19,7 +19,7 @@ const withLocalOpenIAP: ConfigPlugin<{localPath?: string} | void> = (
       // Default local path or use provided one
       const localOpenIapPath =
         props?.localPath ||
-        '/Users/crossplatformkorea/Github/hyodotdev/openiap-apple';
+        path.resolve(config.modRequest.projectRoot, 'openiap-apple');
 
       // Check if local path exists
       if (!fs.existsSync(localOpenIapPath)) {
@@ -33,6 +33,10 @@ const withLocalOpenIAP: ConfigPlugin<{localPath?: string} | void> = (
       }
 
       // Read Podfile
+      if (!fs.existsSync(podfilePath)) {
+        console.warn(`⚠️  Podfile not found at ${podfilePath}. Skipping.`);
+        return config;
+      }
       let podfileContent = fs.readFileSync(podfilePath, 'utf8');
 
       // Check if already has the local pod reference

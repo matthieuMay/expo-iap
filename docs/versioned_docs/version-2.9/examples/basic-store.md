@@ -97,8 +97,8 @@ Purchase objects have different properties on iOS and Android. When accessing pl
 const purchaseToken = purchase.purchaseToken; // Works on both iOS and Android
 
 // ❌ Old platform-specific approach (deprecated)
-// const purchaseToken = (purchase as ProductPurchaseAndroid).purchaseTokenAndroid;
-// const jwsToken = (purchase as ProductPurchaseIos).jwsRepresentationIos;
+// const purchaseToken = (purchase as PurchaseAndroid).purchaseTokenAndroid;
+// const jwsToken = (purchase as PurchaseIOS).jwsRepresentationIOS;
 
 // Platform-specific fields that are still needed
 const packageName = (purchase as ProductPurchaseAndroid).packageNameAndroid;

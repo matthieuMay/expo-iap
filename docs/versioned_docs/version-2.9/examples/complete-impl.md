@@ -44,8 +44,8 @@ useEffect(() => {
 
   const initializeStore = async () => {
     try {
-      await requestProducts({skus: productSkus, type: 'inapp'});
-      await requestProducts({skus: subscriptionSkus, type: 'subs'});
+      await fetchProducts({skus: productSkus, type: 'inapp'});
+      await fetchProducts({skus: subscriptionSkus, type: 'subs'});
     } catch (error) {
       console.error('Failed to initialize store:', error);
     }
@@ -86,7 +86,15 @@ useEffect(() => {
     const completePurchase = async () => {
       try {
         // Validate receipt (recommended)
-        const isValid = await validateReceipt(currentPurchase.id);
+        const isValid =
+          Platform.OS === 'ios'
+            ? await validateReceipt(currentPurchase.productId)
+            : await validateReceipt(currentPurchase.productId, {
+                packageName: (currentPurchase as PurchaseAndroid)
+                  .packageNameAndroid,
+                productToken: currentPurchase.purchaseToken!,
+                isSub: SUBSCRIPTION_IDS.includes(currentPurchase.productId),
+              });
 
         if (isValid) {
           // Finish the transaction
@@ -152,11 +160,7 @@ await finishTransaction({
 
 ```tsx
 // Always validate receipts before granting purchases
-const isValidReceipt = await validatePurchaseReceipt(
-  productId,
-  currentPurchase,
-  handleValidateReceipt,
-);
+const isValidReceipt = await validatePurchase(currentPurchase);
 
 if (isValidReceipt) {
   // Grant the purchase
@@ -246,8 +250,8 @@ export default function Store() {
 
       // Load both products and subscriptions
       await Promise.all([
-        requestProducts({skus: PRODUCT_IDS, type: 'inapp'}),
-        requestProducts({skus: SUBSCRIPTION_IDS, type: 'subs'}),
+        fetchProducts({skus: PRODUCT_IDS, type: 'inapp'}),
+        fetchProducts({skus: SUBSCRIPTION_IDS, type: 'subs'}),
       ]);
 
       console.log('Products loaded successfully');
@@ -415,12 +419,10 @@ export default function Store() {
         return result.isValid;
       }
 
-      return true; // Default to true for unsupported platforms in dev
+      return false;
     } catch (validationError) {
       console.error('Error during receipt validation:', validationError);
-      // Continue despite validation errors in production to not block purchases
-      // In a production app, you might want to handle this differently
-      return true;
+      return false;
     }
   };
 

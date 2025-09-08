@@ -52,11 +52,11 @@ function App() {
   React.useEffect(() => {
     if (connected) {
       // Fetch products and subscriptions
-      requestProducts({
+      fetchProducts({
         skus: androidProductIds.filter((id) => !id.includes('subscription')),
         type: 'inapp',
       });
-      requestProducts({
+      fetchProducts({
         skus: androidProductIds.filter((id) => id.includes('subscription')),
         type: 'subs',
       });
