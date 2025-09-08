@@ -26,6 +26,12 @@ public class ExpoIapModule: Module {
     private var purchaseUpdatedSub: Subscription?
     private var purchaseErrorSub: Subscription?
     private var promotedProductSub: Subscription?
+
+    // Helper to safely remove a listener and nil out the reference
+    private func removeListener(_ sub: inout Subscription?) {
+        if let s = sub { OpenIapModule.shared.removeListener(s) }
+        sub = nil
+    }
     
     nonisolated public func definition() -> ModuleDefinition {
         Name("ExpoIap")
@@ -407,10 +413,12 @@ public class ExpoIapModule: Module {
             Task { @MainActor in
                 guard let self else { return }
                 logDebug("❌ Purchase error callback - sending error event")
+                // Use OpenIapPurchaseError alias for clarity/parity
+                let err: OpenIapPurchaseError = error
                 let errorData: [String: Any?] = [
-                    "code": error.code,
-                    "message": error.message,
-                    "productId": error.productId
+                    "code": err.code,
+                    "message": err.message,
+                    "productId": err.productId,
                 ]
                 self.sendEvent(OpenIapEvent.PurchaseError, errorData)
             }
@@ -428,12 +436,9 @@ public class ExpoIapModule: Module {
     @MainActor
     private func cleanupStore() async {
         logDebug("Cleaning up listeners and ending connection")
-        if let sub = purchaseUpdatedSub { OpenIapModule.shared.removeListener(sub) }
-        if let sub = purchaseErrorSub { OpenIapModule.shared.removeListener(sub) }
-        if let sub = promotedProductSub { OpenIapModule.shared.removeListener(sub) }
-        purchaseUpdatedSub = nil
-        purchaseErrorSub = nil
-        promotedProductSub = nil
+        removeListener(&purchaseUpdatedSub)
+        removeListener(&purchaseErrorSub)
+        removeListener(&promotedProductSub)
         _ = try? await OpenIapModule.shared.endConnection()
     }
     
