@@ -11,7 +11,6 @@ import {
   purchaseUpdatedListener,
   promotedProductListenerIOS,
   getAvailablePurchases,
-  getPurchaseHistories,
   finishTransaction as finishTransactionInternal,
   requestPurchase as requestPurchaseInternal,
   fetchProducts,
@@ -43,7 +42,6 @@ type UseIap = {
   promotedProductsIOS: Purchase[];
   promotedProductIdIOS?: string;
   subscriptions: SubscriptionProduct[];
-  purchaseHistories: Purchase[];
   availablePurchases: Purchase[];
   currentPurchase?: Purchase;
   currentPurchaseError?: PurchaseError;
@@ -59,7 +57,6 @@ type UseIap = {
     isConsumable?: boolean;
   }) => Promise<PurchaseResult | boolean>;
   getAvailablePurchases: (skus: string[]) => Promise<void>;
-  getPurchaseHistories: (skus: string[]) => Promise<void>;
   fetchProducts: (params: {
     skus: string[];
     type?: 'inapp' | 'subs';
@@ -98,8 +95,6 @@ type UseIap = {
   restorePurchases: () => Promise<void>;
   getPromotedProductIOS: () => Promise<Product | null>;
   requestPurchaseOnPromotedProductIOS: () => Promise<void>;
-  /** @deprecated Use requestPurchaseOnPromotedProductIOS instead */
-  buyPromotedProductIOS: () => Promise<void>;
   getActiveSubscriptions: (subscriptionIds?: string[]) => Promise<void>;
   hasActiveSubscriptions: (subscriptionIds?: string[]) => Promise<boolean>;
 };
@@ -121,7 +116,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
   const [products, setProducts] = useState<Product[]>([]);
   const [promotedProductsIOS] = useState<Purchase[]>([]);
   const [subscriptions, setSubscriptions] = useState<SubscriptionProduct[]>([]);
-  const [purchaseHistories, setPurchaseHistories] = useState<Purchase[]>([]);
+  // Removed in v2.9.0: purchaseHistories state and related API
   const [availablePurchases, setAvailablePurchases] = useState<Purchase[]>([]);
   const [currentPurchase, setCurrentPurchase] = useState<Purchase>();
   const [promotedProductIOS, setPromotedProductIOS] = useState<Product>();
@@ -298,13 +293,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     [],
   );
 
-  /**
-   * @deprecated Use getAvailablePurchases instead. This function is just calling getAvailablePurchases internally.
-   * Will be removed in v2.9.0
-   */
-  const getPurchaseHistoriesInternal = useCallback(async (): Promise<void> => {
-    setPurchaseHistories(await getPurchaseHistories());
-  }, []);
+  // NOTE: getPurchaseHistories removed in v2.9.0. Use getAvailablePurchases instead.
 
   const finishTransaction = useCallback(
     async ({
@@ -491,7 +480,6 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     promotedProductsIOS,
     promotedProductIdIOS,
     subscriptions,
-    purchaseHistories,
     finishTransaction,
     availablePurchases,
     currentPurchase,
@@ -501,7 +489,6 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     clearCurrentPurchase,
     clearCurrentPurchaseError,
     getAvailablePurchases: getAvailablePurchasesInternal,
-    getPurchaseHistories: getPurchaseHistoriesInternal,
     fetchProducts: fetchProductsInternal,
     requestProducts: requestProductsInternal,
     requestPurchase: requestPurchaseWithReset,
@@ -511,7 +498,6 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     getSubscriptions: getSubscriptionsInternal,
     getPromotedProductIOS,
     requestPurchaseOnPromotedProductIOS,
-    buyPromotedProductIOS: requestPurchaseOnPromotedProductIOS, // deprecated alias
     getActiveSubscriptions: getActiveSubscriptionsInternal,
     hasActiveSubscriptions: hasActiveSubscriptionsInternal,
   };

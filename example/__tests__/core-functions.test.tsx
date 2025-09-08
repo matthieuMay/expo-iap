@@ -42,10 +42,6 @@ describe('Core Functions Tests', () => {
       expect(typeof ExpoIap.finishTransaction).toBe('function');
     });
 
-    it('should export deprecated getPurchaseHistories function', () => {
-      expect(ExpoIap.getPurchaseHistories).toBeDefined();
-      expect(typeof ExpoIap.getPurchaseHistories).toBe('function');
-    });
 
     it('should export getAvailablePurchases function', () => {
       expect(ExpoIap.getAvailablePurchases).toBeDefined();

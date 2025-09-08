@@ -443,7 +443,7 @@ await requestPurchase({
     - `isOfferPersonalized?` (boolean, Android only): Whether offer is personalized
   - `type?` ('inapp' | 'subs'): Purchase type, defaults to 'inapp'
 
-**Returns:** `Promise<ProductPurchase | ProductPurchase[] | SubscriptionPurchase | SubscriptionPurchase[] | void>`
+**Returns:** `Promise<Purchase | Purchase[] | void>`
 
 **Note:** The actual purchase result is delivered through purchase listeners or the `useIAP` hook callbacks, not as a return value.
 
@@ -556,7 +556,7 @@ const buySubscription = async (subscriptionId: string) => {
     - `purchaseTokenAndroid?` (string, Android only): Token for subscription replacement
     - `replacementModeAndroid?` (number, Android only): Replacement mode for subscription updates
 
-**Returns:** `Promise<SubscriptionPurchase | SubscriptionPurchase[] | null | void>`
+**Returns:** `Promise<Purchase | Purchase[] | null | void>`
 
 > **🚨 Important:** `requestSubscription()` is deprecated and will be removed in v3.0.0. Always use `requestPurchase()` with `type: 'subs'` for subscriptions.
 
@@ -626,29 +626,9 @@ const restorePurchases = async () => {
 
 **Returns:** `Promise<Purchase[]>`
 
-## ~~getPurchaseHistories()~~ (Deprecated)
+## getPurchaseHistories()
 
-:::warning Deprecated `getPurchaseHistories` is deprecated and will be removed in v2.9.0. Use `getAvailablePurchases()` instead.
-
-This function internally just calls `getAvailablePurchases()` on iOS and returns an empty array on Android (Google Play Billing v8 removed purchase history API). :::
-
-Retrieves purchase history for the user.
-
-```tsx
-import {getAvailablePurchases} from 'expo-iap'; // Use this instead
-
-const fetchPurchaseHistory = async () => {
-  try {
-    const purchases = await getAvailablePurchases();
-    console.log('Available purchases:', purchases);
-    return purchases;
-  } catch (error) {
-    console.error('Failed to fetch purchases:', error);
-  }
-};
-```
-
-**Returns:** `Promise<Purchase[]>`
+Removed in v2.9.0. Use `getAvailablePurchases()` instead.
 
 ## deepLinkToSubscriptions()
 

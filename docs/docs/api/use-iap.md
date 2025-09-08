@@ -191,27 +191,15 @@ interface UseIAPOptions {
   }, [currentPurchaseError]);
   ```
 
-#### purchaseHistories
-
-- **Type**: `ProductPurchase[]`
-- **Description**: Array of purchase history items
-- **Example**:
-
-  ```tsx
-  purchaseHistories.map((purchase) => (
-    <PurchaseHistoryItem key={purchase.transactionId} purchase={purchase} />
-  ));
-  ```
-
 #### availablePurchases
 
-- **Type**: `ProductPurchase[]`
+- **Type**: `Purchase[]`
 - **Description**: Array of available purchases (restorable items)
 - **Example**:
 
   ```tsx
   availablePurchases.map((purchase) => (
-    <RestorableItem key={purchase.transactionId} purchase={purchase} />
+    <RestorableItem key={purchase.id} purchase={purchase} />
   ));
   ```
 
@@ -312,7 +300,6 @@ interface UseIAPOptions {
 #### Subscription helpers (hook)
 
 - `getActiveSubscriptions(subscriptionIds?) => Promise<ActiveSubscription[]>`
-
   - Returns active subscription info and also updates `activeSubscriptions` state.
   - Exception to the hook’s void-return design: this method returns data for convenience.
   - Example:
@@ -333,22 +320,7 @@ interface UseIAPOptions {
 - `hasActiveSubscriptions(subscriptionIds?) => Promise<boolean>`
   - Boolean convenience check to see if any active subscriptions exist (optionally filtered by IDs).
 
-#### getPurchaseHistories
-
-- **Type**: `() => Promise<void>`
-- **Description**: Fetch purchase history from the store
-- **Example**:
-
-  ```tsx
-  const fetchPurchaseHistory = async () => {
-    try {
-      await getPurchaseHistories();
-      console.log('Purchase history fetched:', purchaseHistories);
-    } catch (error) {
-      console.error('Failed to fetch purchase history:', error);
-    }
-  };
-  ```
+> Removed in v2.9.0: `purchaseHistories` state and `getPurchaseHistories()` method. Use `getAvailablePurchases()` and `availablePurchases` instead.
 
 #### getAvailablePurchases
 
@@ -441,7 +413,7 @@ interface UseIAPOptions {
 
 - **Type**: `() => Promise<void>`
 - **Description**: Complete the purchase of a promoted product (iOS only)
-- **Note**: `buyPromotedProductIOS` is deprecated, use `requestPurchaseOnPromotedProductIOS` instead
+  > Removed in v2.9.0: `buyPromotedProductIOS`. Use `requestPurchaseOnPromotedProductIOS` instead.
 - **Example**:
 
   ```tsx
@@ -523,7 +495,7 @@ const AndroidPurchaseExample = () => {
         .map((product) => (
           <Button
             key={product.id}
-            title={`${product.title} - ${product.oneTimePurchaseOfferDetails?.formattedPrice}`}
+            title={`${product.title} - ${product.displayPrice}`}
             onPress={() => buyProduct(product)}
           />
         ))}

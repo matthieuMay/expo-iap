@@ -344,7 +344,8 @@ export const getPurchaseHistory = ({
   console.warn(
     '`getPurchaseHistory` is deprecated. Use `getPurchaseHistories` instead. This function will be removed in version 3.0.0.',
   );
-  return getPurchaseHistories({
+  // Use available purchases as a best-effort replacement
+  return getAvailablePurchases({
     alsoPublishToEventListenerIOS:
       alsoPublishToEventListenerIOS ?? alsoPublishToEventListener,
     onlyIncludeActiveItemsIOS:
@@ -352,42 +353,7 @@ export const getPurchaseHistory = ({
   });
 };
 
-/**
- * @deprecated Use getAvailablePurchases instead. This function is just calling getAvailablePurchases internally on iOS
- * and returns an empty array on Android (Google Play Billing v8 removed purchase history API).
- * Will be removed in v2.9.0
- */
-export const getPurchaseHistories = ({
-  alsoPublishToEventListener = false,
-  onlyIncludeActiveItems = false,
-  alsoPublishToEventListenerIOS,
-  onlyIncludeActiveItemsIOS,
-}: {
-  /** @deprecated Use alsoPublishToEventListenerIOS instead */
-  alsoPublishToEventListener?: boolean;
-  /** @deprecated Use onlyIncludeActiveItemsIOS instead */
-  onlyIncludeActiveItems?: boolean;
-  alsoPublishToEventListenerIOS?: boolean;
-  onlyIncludeActiveItemsIOS?: boolean;
-} = {}): Promise<Purchase[]> =>
-  (
-    Platform.select({
-      ios: async () => {
-        return ExpoIapModule.getAvailableItems(
-          alsoPublishToEventListenerIOS ?? alsoPublishToEventListener,
-          onlyIncludeActiveItemsIOS ?? onlyIncludeActiveItems,
-        );
-      },
-      android: async () => {
-        // getPurchaseHistoryByType was removed in Google Play Billing Library v8
-        // Android doesn't provide purchase history anymore, only active purchases
-        console.warn(
-          'getPurchaseHistories is not supported on Android with Google Play Billing Library v8. Use getAvailablePurchases instead to get active purchases.',
-        );
-        return [];
-      },
-    }) || (() => Promise.resolve([]))
-  )();
+// NOTE: `getPurchaseHistories` removed in v2.9.0. Use `getAvailablePurchases` instead.
 
 export const getAvailablePurchases = ({
   alsoPublishToEventListener = false,

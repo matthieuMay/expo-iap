@@ -326,12 +326,6 @@ public class ExpoIapModule: Module {
             }
             return nil
         }
-        
-        AsyncFunction("buyPromotedProductIOS") { () async throws in
-            logDebug("buyPromotedProductIOS called")
-            try await OpenIapModule.shared.requestPurchaseOnPromotedProductIOS()
-        }
-        
         AsyncFunction("getStorefrontIOS") { () async throws -> String in
             logDebug("getStorefrontIOS called")
             return try await OpenIapModule.shared.getStorefrontIOS()

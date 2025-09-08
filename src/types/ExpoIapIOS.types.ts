@@ -32,22 +32,6 @@ export type ProductIOS = ProductCommon & {
   jsonRepresentationIOS: string;
   platform: 'ios';
   subscriptionInfoIOS?: SubscriptionInfo;
-  /**
-   * @deprecated Use `displayNameIOS` instead. This field will be removed in v2.9.0.
-   */
-  displayName?: string;
-  /**
-   * @deprecated Use `isFamilyShareableIOS` instead. This field will be removed in v2.9.0.
-   */
-  isFamilyShareable?: boolean;
-  /**
-   * @deprecated Use `jsonRepresentationIOS` instead. This field will be removed in v2.9.0.
-   */
-  jsonRepresentation?: string;
-  /**
-   * @deprecated Use `subscriptionInfoIOS` instead. This field will be removed in v2.9.0.
-   */
-  subscription?: SubscriptionInfo;
   introductoryPriceNumberOfPeriodsIOS?: string;
   introductoryPriceSubscriptionPeriodIOS?: SubscriptionIosPeriod;
 };
@@ -72,14 +56,6 @@ export type ProductSubscriptionIOS = ProductIOS & {
   platform: 'ios';
   subscriptionPeriodNumberIOS?: string;
   subscriptionPeriodUnitIOS?: SubscriptionIosPeriod;
-  /**
-   * @deprecated Use `discountsIOS` instead. This field will be removed in v2.9.0.
-   */
-  discounts?: Discount[];
-  /**
-   * @deprecated Use `introductoryPriceIOS` instead. This field will be removed in v2.9.0.
-   */
-  introductoryPrice?: string;
 };
 
 // Legacy naming for backward compatibility

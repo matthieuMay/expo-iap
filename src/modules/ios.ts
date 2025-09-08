@@ -310,12 +310,7 @@ export const requestPurchaseOnPromotedProductIOS = (): Promise<void> => {
   return ExpoIapModule.requestPurchaseOnPromotedProductIOS();
 };
 
-/**
- * @deprecated Use requestPurchaseOnPromotedProductIOS instead. Will be removed in v2.9.0
- */
-export const buyPromotedProductIOS = (): Promise<void> => {
-  return requestPurchaseOnPromotedProductIOS();
-};
+// NOTE: buyPromotedProductIOS removed in v2.9.0. Use requestPurchaseOnPromotedProductIOS.
 
 /**
  * Get pending transactions that haven't been finished yet (iOS only).

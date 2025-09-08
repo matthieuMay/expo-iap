@@ -33,18 +33,6 @@ export type ProductAndroid = ProductCommon & {
   oneTimePurchaseOfferDetailsAndroid?: ProductAndroidOneTimePurchaseOfferDetail;
   platform: 'android';
   subscriptionOfferDetailsAndroid?: ProductSubscriptionAndroidOfferDetail[];
-  /**
-   * @deprecated Use `nameAndroid` instead. This field will be removed in v2.9.0.
-   */
-  name?: string;
-  /**
-   * @deprecated Use `oneTimePurchaseOfferDetailsAndroid` instead. This field will be removed in v2.9.0.
-   */
-  oneTimePurchaseOfferDetails?: ProductAndroidOneTimePurchaseOfferDetail;
-  /**
-   * @deprecated Use `subscriptionOfferDetailsAndroid` instead. This field will be removed in v2.9.0.
-   */
-  subscriptionOfferDetails?: ProductSubscriptionAndroidOfferDetail[];
 };
 
 type ProductSubscriptionAndroidOfferDetails = {
@@ -57,10 +45,6 @@ type ProductSubscriptionAndroidOfferDetails = {
 
 export type ProductSubscriptionAndroid = ProductAndroid & {
   subscriptionOfferDetailsAndroid: ProductSubscriptionAndroidOfferDetails[];
-  /**
-   * @deprecated Use `subscriptionOfferDetailsAndroid` instead. This field will be removed in v2.9.0.
-   */
-  subscriptionOfferDetails?: ProductSubscriptionAndroidOfferDetails[];
 };
 
 // Legacy naming for backward compatibility
@@ -137,10 +121,7 @@ export enum PurchaseAndroidState {
 }
 
 // Legacy naming for backward compatibility
-/**
- * @deprecated Use `PurchaseAndroidState` instead. This enum will be removed in v2.9.0.
- */
-export const PurchaseStateAndroid = PurchaseAndroidState;
+// Removed legacy alias `PurchaseStateAndroid` in v2.9.0
 
 // Legacy naming for backward compatibility
 export type ProductPurchaseAndroid = PurchaseCommon & {
@@ -163,19 +144,4 @@ export type ProductPurchaseAndroid = PurchaseCommon & {
 // Preferred naming
 export type PurchaseAndroid = ProductPurchaseAndroid;
 
-// Legacy type aliases for backward compatibility
-/**
- * @deprecated Use `ProductAndroidOneTimePurchaseOfferDetail` instead. This type will be removed in v2.9.0.
- */
-export type OneTimePurchaseOfferDetails =
-  ProductAndroidOneTimePurchaseOfferDetail;
-
-/**
- * @deprecated Use `ProductSubscriptionAndroidOfferDetail` instead. This type will be removed in v2.9.0.
- */
-export type SubscriptionOfferDetail = ProductSubscriptionAndroidOfferDetail;
-
-/**
- * @deprecated Use `ProductSubscriptionAndroidOfferDetails` instead. This type will be removed in v2.9.0.
- */
-export type SubscriptionOfferAndroid = ProductSubscriptionAndroidOfferDetails;
+// Removed legacy Android alias types in v2.9.0

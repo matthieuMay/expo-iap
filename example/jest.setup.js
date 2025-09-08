@@ -32,7 +32,7 @@ jest.mock('expo-iap', () => {
   const mockGetProducts = jest.fn();
   const mockGetSubscriptions = jest.fn();
   const mockRequestPurchase = jest.fn();
-  const mockGetPurchaseHistories = jest.fn();
+  // Removed in v2.9.0
 
   return {
     // Core functions
@@ -44,7 +44,7 @@ jest.mock('expo-iap', () => {
     requestProducts: jest.fn(),
     requestPurchase: mockRequestPurchase,
     finishTransaction: mockFinishTransaction,
-    getPurchaseHistories: mockGetPurchaseHistories,
+    // getPurchaseHistories removed in v2.9.0
     getAvailablePurchases: mockGetAvailablePurchases,
 
     // iOS functions with IOS suffix
@@ -102,7 +102,6 @@ jest.mock('expo-iap', () => {
       getSubscriptions: mockGetSubscriptions,
       requestPurchase: mockRequestPurchase,
       getAvailablePurchases: mockGetAvailablePurchases,
-      getPurchaseHistories: mockGetPurchaseHistories,
       finishTransaction: mockFinishTransaction,
       getActiveSubscriptions: mockGetActiveSubscriptions,
     })),

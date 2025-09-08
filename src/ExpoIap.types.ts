@@ -70,15 +70,7 @@ export type Purchase =
   | (PurchaseAndroid & AndroidPlatform)
   | (PurchaseIOS & IosPlatform);
 
-// Legacy type aliases - deprecated, use Purchase instead
-/**
- * @deprecated Use `Purchase` instead. This type alias will be removed in v2.9.0.
- */
-export type ProductPurchase = Purchase;
-/**
- * @deprecated Use `Purchase` instead. This type alias will be removed in v2.9.0.
- */
-export type SubscriptionPurchase = Purchase;
+// Removed legacy type aliases `ProductPurchase` and `SubscriptionPurchase` in v2.9.0
 
 export type PurchaseResult = {
   responseCode?: number;
