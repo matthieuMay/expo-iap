@@ -1,11 +1,39 @@
 # CHANGELOG
 
+## [2.9.0] - 2025-09-05
+
+### Added
+
+- iOS: Integrated OpenIAP Apple v1.1.6
+- Updated types to match OpenIAP v1.1.0 specification
+- Enhanced error handling with `PurchaseError` type and native error code mapping
+- New type system: `ProductRequest`, `RequestPurchaseProps`, `ReceiptValidationProps`
+- Improved receipt validation with `ReceiptValidationResult`
+- Root-level type re-exports to avoid deep imports (e.g., `ProductAndroid`, `ProductIOS`, `PaymentDiscount`)
+
+### Changed
+
+- Updated serializers for purchases/products to follow OpenIAP structure
+- Updated listener setup to use new OpenIAP methods (`purchaseUpdatedListener`, `purchaseErrorListener`)
+- Added unified `removeAllListeners()` for cleanup
+- `showManageSubscriptionsIOS()` now returns updated subscriptions array (not boolean)
+
+### Fixed
+
+- Fixed duplicate purchase success alerts
+- Fixed restore purchase alerts on screen entry
+- Improved purchase validation logic
+
+### Note
+
+- Android native module integration with OpenIAP Android is planned for v3.0.0
+
 ## [2.8.8] - 2025-09-05
 
 ### Added
 
 - Enhanced `ActiveSubscription` interface with backend validation fields:
-  - `transactionId` - Transaction identifier for backend validation  
+  - `transactionId` - Transaction identifier for backend validation
   - `purchaseToken` - JWT token (iOS) or purchase token (Android) for backend validation
   - `transactionDate` - Transaction timestamp
 - Return subscription changes from `showManageSubscriptionsIOS()` as Promise data

@@ -100,9 +100,7 @@ type UseIap = {
   requestPurchaseOnPromotedProductIOS: () => Promise<void>;
   /** @deprecated Use requestPurchaseOnPromotedProductIOS instead */
   buyPromotedProductIOS: () => Promise<void>;
-  getActiveSubscriptions: (
-    subscriptionIds?: string[],
-  ) => Promise<ActiveSubscription[]>;
+  getActiveSubscriptions: (subscriptionIds?: string[]) => Promise<void>;
   hasActiveSubscriptions: (subscriptionIds?: string[]) => Promise<boolean>;
 };
 
@@ -225,6 +223,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     }): Promise<void> => {
       try {
         const result = await fetchProducts(params);
+
         if (params.type === 'subs') {
           setSubscriptions((prevSubscriptions) =>
             mergeWithDuplicateCheck(
@@ -275,16 +274,13 @@ export function useIAP(options?: UseIAPOptions): UseIap {
   }, []);
 
   const getActiveSubscriptionsInternal = useCallback(
-    async (subscriptionIds?: string[]): Promise<ActiveSubscription[]> => {
+    async (subscriptionIds?: string[]): Promise<void> => {
       try {
         const result = await getActiveSubscriptions(subscriptionIds);
         setActiveSubscriptions(result);
-        return result;
       } catch (error) {
         console.error('Error getting active subscriptions:', error);
-        // Don't clear existing activeSubscriptions on error - preserve current state
-        // This prevents the UI from showing empty state when there are temporary network issues
-        return [];
+        // Preserve existing state on error
       }
     },
     [],
@@ -403,48 +399,76 @@ export function useIAP(options?: UseIAPOptions): UseIap {
   );
 
   const initIapWithSubscriptions = useCallback(async (): Promise<void> => {
+    // CRITICAL: Register listeners BEFORE initConnection to avoid race condition
+    // Events might fire immediately after initConnection, so listeners must be ready
+    console.log('[useIAP] Setting up event listeners BEFORE initConnection...');
+
+    // Register purchase update listener BEFORE initConnection to avoid race conditions.
+    subscriptionsRef.current.purchaseUpdate = purchaseUpdatedListener(
+      async (purchase: Purchase) => {
+        console.log('[useIAP] Purchase success callback triggered:', purchase);
+        setCurrentPurchaseError(undefined);
+        setCurrentPurchase(purchase);
+
+        if ('expirationDateIOS' in purchase) {
+          await refreshSubscriptionStatus(purchase.id);
+        }
+
+        if (optionsRef.current?.onPurchaseSuccess) {
+          optionsRef.current.onPurchaseSuccess(purchase);
+        }
+      },
+    );
+
+    // IMPORTANT: Do NOT register the purchase error listener until after initConnection succeeds.
+    // Some platforms may emit an initialization error event (E_INIT_CONNECTION) during startup.
+    // Delaying registration prevents noisy, misleading errors before the connection is ready.
+
+    if (Platform.OS === 'ios') {
+      // iOS promoted products listener
+      subscriptionsRef.current.promotedProductsIOS = promotedProductListenerIOS(
+        (product: Product) => {
+          console.log('[useIAP] Promoted product callback triggered:', product);
+          setPromotedProductIOS(product);
+
+          if (optionsRef.current?.onPromotedProductIOS) {
+            optionsRef.current.onPromotedProductIOS(product);
+          }
+        },
+      );
+    }
+
+    console.log(
+      '[useIAP] Event listeners registered, now calling initConnection...',
+    );
+
+    // NOW call initConnection after listeners are ready
     const result = await initConnection();
     setConnected(result);
-
-    if (result) {
-      subscriptionsRef.current.purchaseUpdate = purchaseUpdatedListener(
-        async (purchase: Purchase) => {
-          setCurrentPurchaseError(undefined);
-          setCurrentPurchase(purchase);
-
-          if ('expirationDateIOS' in purchase) {
-            await refreshSubscriptionStatus(purchase.id);
-          }
-
-          if (optionsRef.current?.onPurchaseSuccess) {
-            optionsRef.current.onPurchaseSuccess(purchase);
-          }
-        },
-      );
-
-      subscriptionsRef.current.purchaseError = purchaseErrorListener(
-        (error: PurchaseError) => {
-          setCurrentPurchase(undefined);
-          setCurrentPurchaseError(error);
-
-          if (optionsRef.current?.onPurchaseError) {
-            optionsRef.current.onPurchaseError(error);
-          }
-        },
-      );
-
-      if (Platform.OS === 'ios') {
-        // iOS promoted products listener
-        subscriptionsRef.current.promotedProductsIOS =
-          promotedProductListenerIOS((product: Product) => {
-            setPromotedProductIOS(product);
-
-            if (optionsRef.current?.onPromotedProductIOS) {
-              optionsRef.current.onPromotedProductIOS(product);
-            }
-          });
-      }
+    console.log('[useIAP] initConnection result:', result);
+    if (!result) {
+      // If connection failed, clean up listeners
+      console.warn('[useIAP] Connection failed, cleaning up listeners...');
+      subscriptionsRef.current.purchaseUpdate?.remove();
+      subscriptionsRef.current.promotedProductsIOS?.remove();
+      subscriptionsRef.current.purchaseUpdate = undefined;
+      subscriptionsRef.current.promotedProductsIOS = undefined;
+      // Do not register error listener when connection fails
+      return;
     }
+
+    // Now that the connection is established, register the purchase error listener.
+    subscriptionsRef.current.purchaseError = purchaseErrorListener(
+      (error: PurchaseError) => {
+        console.log('[useIAP] Purchase error callback triggered:', error);
+        setCurrentPurchase(undefined);
+        setCurrentPurchaseError(error);
+
+        if (optionsRef.current?.onPurchaseError) {
+          optionsRef.current.onPurchaseError(error);
+        }
+      },
+    );
   }, [refreshSubscriptionStatus]);
 
   useEffect(() => {

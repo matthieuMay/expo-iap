@@ -9,15 +9,36 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import {useIAP, PurchaseError} from 'expo-iap';
+import {useIAP} from '../../src';
+import Loading from '../src/components/Loading';
 import {SUBSCRIPTION_PRODUCT_IDS} from '../../src/utils/constants';
-
-// Centralized subscription IDs
-const subscriptionIds = SUBSCRIPTION_PRODUCT_IDS;
+import type {Purchase, PurchaseError} from '../../src/ExpoIap.types';
 
 export default function AvailablePurchases() {
   const [loading, setLoading] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+
+  // Deduplicate purchases by productId, keeping the most recent transaction
+  const deduplicatePurchases = (purchases: Purchase[]): Purchase[] => {
+    const uniquePurchases = new Map<string, Purchase>();
+
+    for (const purchase of purchases) {
+      const existingPurchase = uniquePurchases.get(purchase.productId);
+      if (!existingPurchase) {
+        uniquePurchases.set(purchase.productId, purchase);
+      } else {
+        // Keep the most recent transaction (higher timestamp)
+        const existingTimestamp = existingPurchase.transactionDate || 0;
+        const newTimestamp = purchase.transactionDate || 0;
+
+        if (newTimestamp > existingTimestamp) {
+          uniquePurchases.set(purchase.productId, purchase);
+        }
+      }
+    }
+
+    return Array.from(uniquePurchases.values());
+  };
 
   // Use the useIAP hook like subscription-flow does
   const {
@@ -31,7 +52,9 @@ export default function AvailablePurchases() {
     finishTransaction,
   } = useIAP({
     onPurchaseSuccess: async (purchase) => {
-      console.log('[AVAILABLE-PURCHASES] Purchase successful:', purchase);
+      // Avoid logging sensitive receipt; it's same as purchaseToken
+      const {transactionReceipt: _omit, ...safePurchase} = purchase as any;
+      console.log('[AVAILABLE-PURCHASES] Purchase successful:', safePurchase);
 
       // Finish transaction like in subscription-flow
       await finishTransaction({
@@ -40,9 +63,7 @@ export default function AvailablePurchases() {
       });
 
       // Refresh status after success
-      setTimeout(() => {
-        checkSubscriptionStatus();
-      }, 1000);
+      checkSubscriptionStatus();
     },
     onPurchaseError: (error: PurchaseError) => {
       console.error('[AVAILABLE-PURCHASES] Purchase failed:', error);
@@ -62,8 +83,11 @@ export default function AvailablePurchases() {
     console.log('[AVAILABLE-PURCHASES] Checking subscription status...');
     setIsCheckingStatus(true);
     try {
-      const subs = await getActiveSubscriptions();
-      console.log('[AVAILABLE-PURCHASES] Active subscriptions result:', subs);
+      await getActiveSubscriptions();
+      console.log(
+        '[AVAILABLE-PURCHASES] Active subscriptions result (state):',
+        activeSubscriptions,
+      );
     } catch (error) {
       console.error(
         '[AVAILABLE-PURCHASES] Error checking subscription status:',
@@ -75,19 +99,32 @@ export default function AvailablePurchases() {
     } finally {
       setIsCheckingStatus(false);
     }
-  }, [connected, getActiveSubscriptions, isCheckingStatus]);
+  }, [
+    activeSubscriptions,
+    connected,
+    getActiveSubscriptions,
+    isCheckingStatus,
+  ]);
 
   const handleGetAvailablePurchases = async () => {
     if (!connected) return;
 
     setLoading(true);
     try {
-      console.log('Loading available purchases...');
-      await getAvailablePurchases([]);
-      console.log('Available purchases request sent');
+      console.log(
+        '[AVAILABLE-PURCHASES] Loading available purchases and active subscriptions...',
+      );
+
+      // Load available purchases and active subscriptions
+      // getPurchaseHistories is deprecated on Android, so we use these instead
+      await Promise.all([getAvailablePurchases([]), getActiveSubscriptions()]);
+
+      console.log(
+        '[AVAILABLE-PURCHASES] Available purchases and active subscriptions loaded',
+      );
     } catch (error) {
-      console.error('Error getting available purchases:', error);
-      Alert.alert('Error', 'Failed to get available purchases');
+      console.error('[AVAILABLE-PURCHASES] Error loading purchases:', error);
+      Alert.alert('Error', 'Failed to load purchase data');
     } finally {
       setLoading(false);
     }
@@ -100,43 +137,51 @@ export default function AvailablePurchases() {
         '[AVAILABLE-PURCHASES] Connected to store, loading subscription products...',
       );
       // Request products first - this is event-based, not promise-based
-      fetchProducts({skus: subscriptionIds, type: 'subs'});
+      fetchProducts({skus: SUBSCRIPTION_PRODUCT_IDS, type: 'subs'});
       console.log(
         '[AVAILABLE-PURCHASES] Product loading request sent - waiting for results...',
       );
 
-      // Then load available purchases
-      console.log('[AVAILABLE-PURCHASES] Loading available purchases...');
-      getAvailablePurchases([]).catch((error) => {
-        console.warn(
-          '[AVAILABLE-PURCHASES] Failed to load available purchases:',
-          error,
-        );
-      });
+      // Then load available purchases and active subscriptions
+      console.log(
+        '[AVAILABLE-PURCHASES] Loading available purchases and active subscriptions...',
+      );
+      Promise.all([getAvailablePurchases([]), getActiveSubscriptions()]).catch(
+        (error) => {
+          console.warn(
+            '[AVAILABLE-PURCHASES] Failed to load purchase data:',
+            error,
+          );
+        },
+      );
     }
-  }, [connected, fetchProducts, getAvailablePurchases]);
+  }, [connected, fetchProducts, getAvailablePurchases, getActiveSubscriptions]);
 
-  // Check subscription status separately like subscription-flow does
+  // Check subscription status when connected
   useEffect(() => {
     if (connected) {
-      // Use a timeout to avoid rapid consecutive calls
-      const timer = setTimeout(() => {
-        checkSubscriptionStatus();
-      }, 500);
-
-      return () => clearTimeout(timer);
+      checkSubscriptionStatus();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected]);
+
+  // Create deduplicated versions of purchases for display
+  const deduplicatedAvailablePurchases =
+    deduplicatePurchases(availablePurchases);
 
   // Track state changes for debugging
   useEffect(() => {
     console.log(
       '[AVAILABLE-PURCHASES] availablePurchases:',
       availablePurchases.length,
-      'items',
+      'items (raw)',
     );
-  }, [availablePurchases]);
+    console.log(
+      '[AVAILABLE-PURCHASES] deduplicatedAvailablePurchases:',
+      deduplicatedAvailablePurchases.length,
+      'items (deduplicated)',
+    );
+  }, [availablePurchases, deduplicatedAvailablePurchases]);
 
   useEffect(() => {
     console.log(
@@ -153,6 +198,11 @@ export default function AvailablePurchases() {
       subscriptions,
     );
   }, [subscriptions]);
+
+  // Show loading while disconnected
+  if (!connected) {
+    return <Loading message="Connecting to Store..." />;
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -229,112 +279,95 @@ export default function AvailablePurchases() {
         </View>
       )}
 
-      {/* Available Purchases Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📋 Purchase History</Text>
-        <Text style={styles.subtitle}>
-          Past purchases and subscription transactions
-        </Text>
-
-        {availablePurchases.length === 0 && activeSubscriptions.length === 0 ? (
-          <Text style={styles.emptyText}>No purchase history found</Text>
-        ) : availablePurchases.length === 0 ? (
-          <Text style={styles.emptyText}>
-            No historical purchases found (active subscriptions shown above)
+      {/* Available Purchases Section - Non-consumed/Non-acknowledged purchases */}
+      {deduplicatedAvailablePurchases.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>💰 Available Purchases</Text>
+          <Text style={styles.subtitle}>
+            Non-consumed purchases and active transactions (deduplicated)
           </Text>
-        ) : (
-          availablePurchases.map((purchase, index) => (
-            <View key={purchase.productId + index} style={styles.purchaseItem}>
-              <View style={styles.purchaseRow}>
-                <Text style={styles.label}>Product ID:</Text>
-                <Text style={styles.value}>{purchase.productId}</Text>
-              </View>
-              <View style={styles.purchaseRow}>
-                <Text style={styles.label}>Platform:</Text>
-                <Text style={styles.value}>{purchase.platform}</Text>
-              </View>
-              {purchase.transactionDate && (
-                <View style={styles.purchaseRow}>
-                  <Text style={styles.label}>Date:</Text>
-                  <Text style={styles.value}>
-                    {new Date(purchase.transactionDate).toLocaleDateString()}
-                  </Text>
+
+          {deduplicatedAvailablePurchases.map((purchase, index) => (
+            <View
+              key={`available-${purchase.productId}-${index}`}
+              style={[styles.purchaseItem, styles.availablePurchaseItem]}
+            >
+              <View style={styles.purchaseHeader}>
+                <Text style={styles.productId}>{purchase.productId}</Text>
+                <View style={[styles.statusBadge, styles.availableBadge]}>
+                  <Text style={styles.statusBadgeText}>💰 Available</Text>
                 </View>
-              )}
-              {purchase.transactionId && (
+              </View>
+
+              <View style={styles.purchaseDetails}>
                 <View style={styles.purchaseRow}>
-                  <Text style={styles.label}>Transaction ID:</Text>
-                  <Text style={styles.value}>{purchase.transactionId}</Text>
+                  <Text style={styles.label}>Platform:</Text>
+                  <Text style={styles.value}>{purchase.platform}</Text>
                 </View>
-              )}
-
-              {/* iOS-specific fields with new IOS naming convention */}
-              {Platform.OS === 'ios' &&
-                'expirationDateIOS' in purchase &&
-                purchase.expirationDateIOS && (
+                {purchase.transactionDate && (
                   <View style={styles.purchaseRow}>
-                    <Text style={styles.label}>Expires:</Text>
-                    <Text
-                      style={[
-                        styles.value,
-                        purchase.expirationDateIOS < Date.now() &&
-                          styles.expiredText,
-                      ]}
-                    >
-                      {new Date(
-                        purchase.expirationDateIOS,
-                      ).toLocaleDateString()}
-                      {purchase.expirationDateIOS < Date.now()
-                        ? ' (Expired)'
-                        : ''}
-                    </Text>
-                  </View>
-                )}
-
-              {Platform.OS === 'ios' &&
-                'environmentIOS' in purchase &&
-                purchase.environmentIOS && (
-                  <View style={styles.purchaseRow}>
-                    <Text style={styles.label}>Environment:</Text>
-                    <Text style={styles.value}>{purchase.environmentIOS}</Text>
-                  </View>
-                )}
-
-              {Platform.OS === 'ios' &&
-                'originalTransactionDateIOS' in purchase &&
-                purchase.originalTransactionDateIOS && (
-                  <View style={styles.purchaseRow}>
-                    <Text style={styles.label}>Original Date:</Text>
+                    <Text style={styles.label}>Date:</Text>
                     <Text style={styles.value}>
-                      {new Date(
-                        purchase.originalTransactionDateIOS,
-                      ).toLocaleDateString()}
+                      {new Date(purchase.transactionDate).toLocaleDateString()}
                     </Text>
+                  </View>
+                )}
+                {purchase.transactionId && (
+                  <View style={styles.purchaseRow}>
+                    <Text style={styles.label}>Transaction ID:</Text>
+                    <Text style={styles.value}>{purchase.transactionId}</Text>
                   </View>
                 )}
 
-              {/* Android-specific fields */}
-              {Platform.OS === 'android' &&
-                'autoRenewingAndroid' in purchase &&
-                purchase.autoRenewingAndroid !== undefined && (
-                  <View style={styles.purchaseRow}>
-                    <Text style={styles.label}>Auto Renewing:</Text>
-                    <Text
-                      style={[
-                        styles.value,
-                        purchase.autoRenewingAndroid
-                          ? styles.activeText
-                          : styles.expiredText,
-                      ]}
-                    >
-                      {purchase.autoRenewingAndroid ? '✅ Yes' : '❌ No'}
-                    </Text>
-                  </View>
-                )}
+                {/* iOS-specific fields */}
+                {Platform.OS === 'ios' &&
+                  'expirationDateIOS' in purchase &&
+                  purchase.expirationDateIOS && (
+                    <View style={styles.purchaseRow}>
+                      <Text style={styles.label}>Expires:</Text>
+                      <Text
+                        style={[
+                          styles.value,
+                          purchase.expirationDateIOS < Date.now() &&
+                            styles.expiredText,
+                        ]}
+                      >
+                        {new Date(
+                          purchase.expirationDateIOS,
+                        ).toLocaleDateString()}
+                        {purchase.expirationDateIOS < Date.now()
+                          ? ' (Expired)'
+                          : ''}
+                      </Text>
+                    </View>
+                  )}
+
+                {Platform.OS === 'ios' &&
+                  'environmentIOS' in purchase &&
+                  purchase.environmentIOS && (
+                    <View style={styles.purchaseRow}>
+                      <Text style={styles.label}>Environment:</Text>
+                      <Text style={styles.value}>
+                        {purchase.environmentIOS}
+                      </Text>
+                    </View>
+                  )}
+              </View>
             </View>
-          ))
+          ))}
+        </View>
+      )}
+
+      {/* Empty State */}
+      {deduplicatedAvailablePurchases.length === 0 &&
+        activeSubscriptions.length === 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>📋 Purchase Status</Text>
+            <Text style={styles.emptyText}>
+              No purchases or active subscriptions found
+            </Text>
+          </View>
         )}
-      </View>
 
       <TouchableOpacity
         style={[styles.button, !connected && styles.buttonDisabled]}
@@ -427,6 +460,22 @@ const styles = StyleSheet.create({
     borderLeftColor: '#28a745',
     backgroundColor: '#f8fff9',
     borderLeftWidth: 4,
+  },
+  availablePurchaseItem: {
+    borderLeftColor: '#007AFF',
+    backgroundColor: '#f0f8ff',
+    borderLeftWidth: 4,
+  },
+  availableBadge: {
+    backgroundColor: '#e7f3ff',
+  },
+  historyPurchaseItem: {
+    borderLeftColor: '#6c757d',
+    backgroundColor: '#f8f9fa',
+    borderLeftWidth: 4,
+  },
+  historyBadge: {
+    backgroundColor: '#f0f0f0',
   },
   emptyText: {
     color: '#666',

@@ -1,1197 +1,440 @@
 import ExpoModulesCore
 import StoreKit
+import OpenIAP
+import OSLog
 
-func serializeDebug(_ s: String) -> String? {
+private let iapLogger = Logger(subsystem: "dev.hyo.expo-iap", category: "ExpoIapModule")
+private func logDebug(_ message: String) {
+    // Use OSLog/Logger so logs are structured and filterable
+    // Suppress debug logs in Release builds
     #if DEBUG
-        return s
-    #else
-        return nil
+    iapLogger.debug("\(message, privacy: .public)")
     #endif
 }
 
-func logDebug(_ message: String) {
-    #if DEBUG
-        print("DEBUG - \(message)")
-    #endif
-}
-
-struct IapEvent {
+// Event names
+struct OpenIapEvent {
     static let PurchaseUpdated = "purchase-updated"
     static let PurchaseError = "purchase-error"
     static let PromotedProductIOS = "promoted-product-ios"
 }
 
-@available(iOS 15.0, *)
-func serializeTransaction(_ transaction: Transaction, jwsRepresentationIOS: String? = nil) -> [String: Any?] {
-    let _ =
-        transaction.productType.rawValue.lowercased().contains("renewable")
-        || transaction.expirationDate != nil
-
-    var transactionReasonIOS: String? = nil
-    var webOrderLineItemId: Int? = nil
-    var jsonData: [String: Any]? = nil
-    var jwsReceipt: String = ""
-
-    let jsonRep = transaction.jsonRepresentation
-    jwsReceipt = String(data: jsonRep, encoding: .utf8) ?? ""
-
-    do {
-        if let jsonObj = try JSONSerialization.jsonObject(with: jsonRep) as? [String: Any] {
-            jsonData = jsonObj
-            transactionReasonIOS = jsonObj["transactionReason"] as? String
-            if let webOrderId = jsonObj["webOrderLineItemID"] as? NSNumber {
-                webOrderLineItemId = webOrderId.intValue
-            }
-        }
-    } catch {
-        print("Error parsing JSON representation: \(error)")
-    }
-
-    var purchaseMap: [String: Any?] = [
-        "id": String(transaction.id),
-        "productId": transaction.productID,
-        "ids": [transaction.productID],
-        "transactionId": String(transaction.id), // @deprecated - use id instead
-        "transactionDate": transaction.purchaseDate.timeIntervalSince1970 * 1000,
-        "transactionReceipt": jwsReceipt,
-        "platform": "ios",
-
-        "quantityIOS": transaction.purchasedQuantity,
-        "originalTransactionDateIOS": transaction.originalPurchaseDate.timeIntervalSince1970 * 1000,
-        "originalTransactionIdentifierIOS": String(transaction.originalID),
-        "appAccountToken": transaction.appAccountToken?.uuidString,
-
-        "appBundleIdIOS": transaction.appBundleID,
-        "productTypeIOS": transaction.productType.rawValue,
-        "subscriptionGroupIdIOS": transaction.subscriptionGroupID,
-
-        "webOrderLineItemIdIOS": webOrderLineItemId,
-
-        "expirationDateIOS": transaction.expirationDate.map { $0.timeIntervalSince1970 * 1000 },
-
-        "isUpgradedIOS": transaction.isUpgraded,
-        "ownershipTypeIOS": transaction.ownershipType.rawValue,
-
-        "revocationDateIOS": transaction.revocationDate.map { $0.timeIntervalSince1970 * 1000 },
-        "revocationReasonIOS": transaction.revocationReason?.rawValue,
-        "transactionReasonIOS": transactionReasonIOS,
-    ]
-
-    if (jwsRepresentationIOS != nil) {
-        logDebug("serializeTransaction adding jwsRepresentationIOS with length: \(jwsRepresentationIOS!.count)")
-        purchaseMap["jwsRepresentationIOS"] = jwsRepresentationIOS
-        purchaseMap["purchaseToken"] = jwsRepresentationIOS
-    } else {
-        logDebug("serializeTransaction jwsRepresentationIOS is nil")
-    }
-    
-    if #available(iOS 16.0, *) {
-        purchaseMap["environmentIOS"] = transaction.environment.rawValue
-    }
-
-    if #available(iOS 17.0, *) {
-        purchaseMap["storefrontCountryCodeIOS"] = transaction.storefront.countryCode
-        purchaseMap["reasonIOS"] = transaction.reason.rawValue
-    }
-
-    if #available(iOS 17.2, *) {
-        if let offer = transaction.offer {
-            purchaseMap["offerIOS"] = [
-                "id": offer.id ?? "",
-                "type": offer.type.rawValue,
-                "paymentMode": offer.paymentMode?.rawValue ?? "",
-            ]
-        }
-    }
-
-    if #available(iOS 15.4, *), let jsonData = jsonData {
-        if let price = jsonData["price"] as? NSNumber {
-            // START: Deprecated - will be removed in v2.9.0
-            // Use currencyCodeIOS, currencySymbolIOS, countryCodeIOS instead
-            purchaseMap["priceIOS"] = price.doubleValue
-            // END: Deprecated - will be removed in v2.9.0
-        }
-        if let currency = jsonData["currency"] as? String {
-            purchaseMap["currencyCodeIOS"] = currency
-            
-            let locale = Locale(identifier: Locale.identifier(fromComponents: [NSLocale.Key.currencyCode.rawValue: currency]))
-            purchaseMap["currencySymbolIOS"] = locale.currencySymbol
-            
-            // START: Deprecated - will be removed in v2.9.0
-            // Use currencyCodeIOS instead
-            purchaseMap["currencyIOS"] = currency
-            // END: Deprecated - will be removed in v2.9.0
-        }
-        if let storefront = jsonData["storefront"] as? String {
-            purchaseMap["countryCodeIOS"] = storefront
-        }
-    }
-
-    return purchaseMap
-}
-
-private let DEFAULT_SUBSCRIPTION_PERIOD_UNIT = "DAY" // Default fallback unit for subscription periods.
-
-func getPeriodIOS(_ unit: Product.SubscriptionPeriod.Unit) -> String {
-    return switch (unit) {
-    case .day: "DAY"
-    case .week: "WEEK"
-    case .month: "MONTH"
-    case .year: "YEAR"
-    @unknown default: 
-        fatalError("Unknown subscription period unit: \(unit)")
-    }
-}
-
-func serializeOffer(_ offer: Product.SubscriptionOffer?) -> [String: Any?]? {
-    guard let offer = offer else { return nil }
-    
-    return [
-        "id": offer.id,
-        "period": [
-            "unit": getPeriodIOS(offer.period.unit),
-            "value": offer.period.value
-        ],
-        "periodCount": offer.periodCount,
-        "paymentMode": offer.paymentMode.rawValue,
-        "type": offer.type.rawValue,
-        "price": offer.price,
-        "displayPrice": offer.displayPrice,
-    ]
-}
-
-func serializeSubscription(_ s: Product.SubscriptionInfo?) -> [String: Any?]? {
-    guard let s = s else { return nil }
-    return [
-        "introductoryOffer": serializeOffer(s.introductoryOffer),
-        "promotionalOffers": s.promotionalOffers.map(serializeOffer),
-        "subscriptionGroupId": s.subscriptionGroupID,
-        "subscriptionPeriod": [
-            "unit": getPeriodIOS(s.subscriptionPeriod.unit),
-            "value": s.subscriptionPeriod.value
-        ],
-    ]
-
-}
-
-@available(iOS 15.0, *)
-func serializeProduct(_ p: Product) -> [String: Any?] {
-    let productType: String = p.subscription != nil ? "subs" : "inapp"
-    
-    var discounts: [[String: Any?]]? = nil
-    var introductoryPrice: String? = nil
-    var introductoryPriceAsAmountIOS: String? = nil
-    var introductoryPricePaymentModeIOS: String? = nil
-    var introductoryPriceNumberOfPeriodsIOS: String? = nil
-    var introductoryPriceSubscriptionPeriodIOS: String? = nil
-    var subscriptionPeriodNumberIOS: String? = nil
-    var subscriptionPeriodUnitIOS: String? = nil
-    
-    if let subscription = p.subscription {
-        if !subscription.promotionalOffers.isEmpty {
-            discounts = subscription.promotionalOffers.compactMap { offer in
-                return [
-                    "identifier": offer.id ?? "",
-                    "type": offer.type.rawValue,
-                    "numberOfPeriods": "\(offer.periodCount)",
-                    "price": "\(offer.price)",
-                    "localizedPrice": offer.displayPrice,
-                    "paymentMode": offer.paymentMode.rawValue,
-                    "subscriptionPeriod": getPeriodIOS(offer.period.unit)
-                ]
-            }
-        }
-        
-        if let introOffer = subscription.introductoryOffer {
-            introductoryPrice = introOffer.displayPrice
-            introductoryPriceAsAmountIOS = "\(introOffer.price)"
-            introductoryPricePaymentModeIOS = introOffer.paymentMode.rawValue
-            introductoryPriceNumberOfPeriodsIOS = "\(introOffer.periodCount)"
-            introductoryPriceSubscriptionPeriodIOS = getPeriodIOS(introOffer.period.unit)
-        }
-        
-        subscriptionPeriodNumberIOS = "\(subscription.subscriptionPeriod.value)"
-        subscriptionPeriodUnitIOS = getPeriodIOS(subscription.subscriptionPeriod.unit)
-    }
-    
-    return [
-        "debugDescription": serializeDebug(p.debugDescription),
-        "description": p.description,
-        "displayNameIOS": p.displayName,
-        "discountsIOS": discounts,
-        "introductoryPriceIOS": introductoryPrice,
-        "introductoryPriceAsAmountIOS": introductoryPriceAsAmountIOS,
-        "introductoryPricePaymentModeIOS": introductoryPricePaymentModeIOS,
-        "introductoryPriceNumberOfPeriodsIOS": introductoryPriceNumberOfPeriodsIOS,
-        "introductoryPriceSubscriptionPeriodIOS": introductoryPriceSubscriptionPeriodIOS,
-        "subscriptionPeriodNumberIOS": subscriptionPeriodNumberIOS,
-        "subscriptionPeriodUnitIOS": subscriptionPeriodUnitIOS,
-        "displayPrice": p.displayPrice,
-        "id": p.id,
-        "title": p.displayName,
-        "isFamilyShareableIOS": p.isFamilyShareable,
-        "jsonRepresentationIOS": String(data: p.jsonRepresentation, encoding: .utf8),
-        "price": p.price,
-        "subscriptionInfoIOS": serializeSubscription(p.subscription),
-        "type": productType,
-        "currency": p.priceFormatStyle.currencyCode,
-        "platform": "ios",
-        // START: Deprecated - will be removed in v2.9.0
-        // Use displayNameIOS instead of displayName
-        "displayName": p.displayName,
-        // Use discountsIOS instead of discounts
-        "discounts": discounts,
-        // Use introductoryPriceIOS instead of introductoryPrice
-        "introductoryPrice": introductoryPrice,
-        // Use isFamilyShareableIOS instead of isFamilyShareable
-        "isFamilyShareable": p.isFamilyShareable,
-        // Use jsonRepresentationIOS instead of jsonRepresentation
-        "jsonRepresentation": String(data: p.jsonRepresentation, encoding: .utf8),
-        // Use subscriptionInfoIOS instead of subscription
-        "subscription": serializeSubscription(p.subscription),
-        // END: Deprecated - will be removed in v2.9.0
-    ]
-}
-
-@available(iOS 15.0, *)
-@Sendable func serialize(_ rs: Transaction.RefundRequestStatus?) -> String? {
-    guard let rs = rs else { return nil }
-    switch rs {
-    case .success: return "success"
-    case .userCancelled: return "userCancelled"
-    default:
-        return nil
-    }
-}
-
-@available(iOS 15.0, *)
-func serializeSubscriptionStatus(_ status: Product.SubscriptionInfo.Status) -> [String: Any?] {
-    return [
-        "state": status.state.rawValue,
-        "renewalInfo": serializeRenewalInfo(status.renewalInfo),
-        "platform": "ios",
-    ]
-}
-
-@available(iOS 15.0, *)
-func serializeRenewalInfo(_ renewalInfo: VerificationResult<Product.SubscriptionInfo.RenewalInfo>)
-    -> [String: Any?]?
-{
-    switch renewalInfo {
-    case .unverified:
-        return nil
-    case .verified(let info):
-        return [
-            "autoRenewStatus": info.willAutoRenew,
-            "autoRenewPreference": info.autoRenewPreference,
-            "expirationReason": info.expirationReason,
-            "deviceVerification": info.deviceVerification,
-            "currentProductID": info.currentProductID,
-            "debugDescription": info.debugDescription,
-            "gracePeriodExpirationDate": info.gracePeriodExpirationDate,
-            "platform": "ios",
-        ]
-    }
-}
-
-@available(iOS 15.0, *)
+@available(iOS 15.0, tvOS 15.0, *)
+@MainActor
 public class ExpoIapModule: Module {
-    private var transactions: [String: Transaction] = [:]
-    private var productStore: ProductStore?
-    private var hasListeners = false
-    private var updateListenerTask: Task<Void, Error>?
-    private var paymentObserver: PaymentObserver?
-    private var promotedPayment: SKPayment?
-    private var promotedProduct: SKProduct?
+    // Subscriptions for OpenIapModule event listeners
+    private var purchaseUpdatedSub: Subscription?
+    private var purchaseErrorSub: Subscription?
+    private var promotedProductSub: Subscription?
     
-    private let subscriptionChangePropagationDelay: UInt64 = 1_500_000_000 // 1.5 seconds in nanoseconds
-    private var isInitialized = false
-
-    public func definition() -> ModuleDefinition {
+    nonisolated public func definition() -> ModuleDefinition {
         Name("ExpoIap")
-
-        Constants([
-            "ERROR_CODES": IapErrorCode.toDictionary()
-        ])
-
-        Events(IapEvent.PurchaseUpdated, IapEvent.PurchaseError, IapEvent.PromotedProductIOS)
-
-        OnStartObserving {
-            self.hasListeners = true
-            self.addTransactionObserver()
+        
+        Constants {
+            OpenIapSerialization.errorCodes()
         }
-
-        OnStopObserving {
-            self.hasListeners = false
-            self.removeTransactionObserver()
-        }
-
-        Function("initConnection") { () -> Bool in
-            self.cleanupExistingState()
-            
-            self.productStore = ProductStore()
-            
-            if self.paymentObserver == nil {
-                self.paymentObserver = PaymentObserver(module: self)
-                SKPaymentQueue.default().add(self.paymentObserver!)
-            }
-            
-            self.isInitialized = true
-            return AppStore.canMakePayments
-        }
-
-        AsyncFunction("getStorefront") {
-            let storefront = await Storefront.current
-            return storefront?.countryCode
-        }
-
-        AsyncFunction("getAppTransactionIOS") { () async throws -> [String: Any?]? in
-            if #available(iOS 16.0, *) {
-                #if compiler(>=5.7)
-                let verificationResult = try await AppTransaction.shared
-                
-                let appTransaction: AppTransaction
-                switch verificationResult {
-                case .verified(let verified):
-                    appTransaction = verified
-                case .unverified(_, _):
-                    return nil
-                }
-                
-                var result: [String: Any?] = [
-                    "bundleId": appTransaction.bundleID,
-                    "appVersion": appTransaction.appVersion,
-                    "originalAppVersion": appTransaction.originalAppVersion,
-                    "originalPurchaseDate": appTransaction.originalPurchaseDate.timeIntervalSince1970 * 1000,
-                    "deviceVerification": appTransaction.deviceVerification.base64EncodedString(),
-                    "deviceVerificationNonce": appTransaction.deviceVerificationNonce.uuidString,
-                    "environment": appTransaction.environment.rawValue,
-                    "signedDate": appTransaction.signedDate.timeIntervalSince1970 * 1000,
-                    "appId": appTransaction.appID,
-                    "appVersionId": appTransaction.appVersionID,
-                    "preorderDate": appTransaction.preorderDate.map { $0.timeIntervalSince1970 * 1000 }
-                ]
-                
-                // iOS 18.4+ properties - only compile with Xcode 16.4+ (Swift 6.1+)
-                // This prevents build failures on Xcode 16.3 and below
-                #if swift(>=6.1)
-                if #available(iOS 18.4, *) {
-                    result["appTransactionId"] = appTransaction.appTransactionID
-                    result["originalPlatform"] = appTransaction.originalPlatform.rawValue
-                }
-                #endif
-                
-                return result
-                #else
-                throw Exception(
-                    name: "ExpoIapModule",
-                    description: "getAppTransaction requires Xcode 15.0+ with iOS 16.0 SDK for compilation",
-                    code: IapErrorCode.unknown
-                )
-                #endif
-            } else {
-                throw Exception(
-                    name: "ExpoIapModule",
-                    description: "getAppTransaction requires iOS 16.0 or later",
-                    code: IapErrorCode.unknown
-                )
+        
+        Events(
+            OpenIapEvent.PurchaseUpdated,
+            OpenIapEvent.PurchaseError,
+            OpenIapEvent.PromotedProductIOS
+        )
+        
+        OnCreate {
+            logDebug("Module created")
+            Task { @MainActor in
+                self.setupStore()
             }
         }
         
-        AsyncFunction("getPromotedProductIOS") { () -> [String: Any?]? in
-            guard let product = self.promotedProduct else {
+        OnDestroy {
+            logDebug("Module destroyed")
+            Task { @MainActor in
+                await self.cleanupStore()
+            }
+        }
+        
+        // MARK: - Connection Management
+        
+        AsyncFunction("initConnection") { () async throws -> Bool in
+            logDebug("initConnection called")
+            let isConnected = try await OpenIapModule.shared.initConnection()
+            logDebug("Connection initialized: \(isConnected)")
+            return isConnected
+        }
+        
+        AsyncFunction("endConnection") { () async throws -> Bool in
+            logDebug("endConnection called")
+            let _ = try await OpenIapModule.shared.endConnection()
+            
+            logDebug("Connection ended")
+            return true
+        }
+        
+        // MARK: - Product Management
+        
+        AsyncFunction("fetchProducts") { (params: [String: Any]) async throws -> [[String: Any?]] in
+            logDebug("fetchProducts raw params: \(params)")
+            
+            // Handle both object format {skus: [...], type: "..."} and array format
+            var skus: [String] = []
+            var typeString = "all"
+            
+            if let skusArray = params["skus"] as? [String] {
+                // Object format: {skus: [...], type: "..."}
+                skus = skusArray
+                typeString = params["type"] as? String ?? "all"
+            } else {
+                // Array format passed directly - reconstruct from indexed keys
+                var tempSkus: [String] = []
+                var index = 0
+                while let sku = params["\(index)"] as? String {
+                    tempSkus.append(sku)
+                    index += 1
+                }
+                skus = tempSkus
+            }
+            
+            logDebug("fetchProducts parsed - skus: \(skus), type: \(typeString)")
+            logDebug("SKUs count: \(skus.count)")
+            
+            // Validate SKUs
+            guard !skus.isEmpty else {
+                logDebug("ERROR: Empty SKUs array!")
+                throw OpenIapError.purchaseFailed(reason: "Empty SKU list provided")
+            }
+            
+            // Convert string to OpenIapRequestProductType enum
+            let productType: OpenIapRequestProductType = {
+                switch typeString {
+                case "inapp":
+                    return .inapp
+                case "subs":
+                    return .subs
+                default:
+                    return .all
+                }
+            }()
+            
+            logDebug("Converted type to OpenIapRequestProductType: \(productType)")
+            
+            // Build OpenIapProductRequest and fetch via OpenIapModule
+            let request = OpenIapProductRequest(skus: skus, type: productType)
+            let products = try await OpenIapModule.shared.fetchProducts(request)
+            logDebug("Fetched \(products.count) products from store")
+            if products.isEmpty {
+                logDebug("No products found. Possible reasons:")
+                logDebug("1. Products not configured in App Store Connect")
+                logDebug("2. Bundle ID mismatch")
+                logDebug("3. Not signed in to sandbox account")
+                logDebug("4. Products pending review")
+            }
+            for product in products {
+                logDebug("Product: \(product.id) - \(product.title) - \(product.displayPrice)")
+            }
+            return OpenIapSerialization.products(products)
+        }
+        
+        // MARK: - Purchase Operations
+        
+        AsyncFunction("requestPurchase") { (params: [String: Any]) async throws in
+            // Extract and validate required fields
+            guard let sku = params["sku"] as? String, !sku.isEmpty else {
+                throw OpenIapError.purchaseFailed(reason: "Missing required 'sku'")
+            }
+
+            // Optional fields
+            let andFinish = (params["andDangerouslyFinishTransactionAutomatically"] as? Bool) ?? false
+            let appAccountToken = params["appAccountToken"] as? String
+            let quantity: Int? = {
+                if let q = params["quantity"] as? Int { return q }
+                if let qd = params["quantity"] as? Double { return Int(qd) }
                 return nil
+            }()
+
+            // Discount offer mapping (strings expected from JS)
+            // Use OpenIapDiscountOffer from OpenIAP package (avoid relying on legacy typealiases)
+            var discountOffer: OpenIapDiscountOffer? = nil
+            if let offer = params["withOffer"] as? [String: Any] {
+                let identifier = (offer["identifier"] as? String) ?? (offer["id"] as? String) ?? ""
+                let keyIdentifier = (offer["keyIdentifier"] as? String) ?? ""
+                let nonce = (offer["nonce"] as? String) ?? ""
+                let signature = (offer["signature"] as? String) ?? ""
+                let timestamp = (offer["timestamp"] as? String) ?? ""
+                if !identifier.isEmpty && !keyIdentifier.isEmpty && !nonce.isEmpty && !signature.isEmpty && !timestamp.isEmpty {
+                    discountOffer = OpenIapDiscountOffer(
+                        identifier: identifier,
+                        keyIdentifier: keyIdentifier,
+                        nonce: nonce,
+                        signature: signature,
+                        timestamp: timestamp
+                    )
+                }
             }
+
+            let tokenForLog = appAccountToken ?? "nil"
+            let qtyForLog = quantity ?? -1
+            logDebug("requestPurchase parsed - sku: \(sku), andFinish: \(andFinish), appAccountToken: \(tokenForLog), quantity: \(qtyForLog), hasOffer: \(discountOffer != nil)")
             
-            return [
-                "productIdentifier": product.productIdentifier,
-                "localizedTitle": product.localizedTitle,
-                "localizedDescription": product.localizedDescription,
-                "price": product.price.doubleValue,
-                "priceLocale": [
-                    "currencyCode": product.priceLocale.currencyCode ?? "",
-                    "currencySymbol": product.priceLocale.currencySymbol ?? "",
-                    "countryCode": product.priceLocale.regionCode ?? ""
-                ]
-            ]
+            
+            // Build purchase request props using OpenIapRequestPurchaseProps
+            let requestProps = OpenIapRequestPurchaseProps(
+                sku: sku,
+                andDangerouslyFinishTransactionAutomatically: andFinish,
+                appAccountToken: appAccountToken,
+                quantity: quantity,
+                withOffer: discountOffer
+            )
+            
+            do {
+                _ = try await OpenIapModule.shared.requestPurchase(requestProps)
+                logDebug("Purchase request completed successfully")
+            } catch {
+                logDebug("Purchase request failed with error: \(error)")
+                throw error
+            }
         }
         
-        AsyncFunction("requestPurchaseOnPromotedProductIOS") { () -> Void in
-            guard let payment = self.promotedPayment else {
-                throw Exception(
-                    name: "ExpoIapModule",
-                    description: "No promoted product available",
-                    code: IapErrorCode.itemUnavailable
+        AsyncFunction("finishTransaction") { (transactionId: String) async throws -> Bool in
+            logDebug("finishTransaction called with id: \(transactionId)")
+            let result = try await OpenIapModule.shared.finishTransaction(transactionIdentifier: transactionId)
+            return result
+        }
+        
+        // MARK: - Purchase History
+        
+        AsyncFunction("getAvailablePurchases") { (options: [String: Any?]?) async throws -> [[String: Any?]] in
+            logDebug("getAvailablePurchases called")
+            
+            // Build options and get purchases directly from OpenIapModule
+            let purchaseOptions: OpenIapGetAvailablePurchasesProps? = options.map {
+                OpenIapGetAvailablePurchasesProps(
+                    alsoPublishToEventListenerIOS: $0["alsoPublishToEventListenerIOS"] as? Bool,
+                    onlyIncludeActiveItemsIOS: $0["onlyIncludeActiveItemsIOS"] as? Bool
                 )
             }
-            
-            SKPaymentQueue.default().add(payment)
-            
-            self.promotedPayment = nil
-            self.promotedProduct = nil
+            let purchases = try await OpenIapModule.shared.getAvailablePurchases(purchaseOptions)
+            return OpenIapSerialization.purchases(purchases)
         }
-
-        AsyncFunction("fetchProducts") { (skus: [String]) -> [[String: Any?]?] in
-            try self.ensureConnection()
+        
+        // Legacy function for backward compatibility
+        AsyncFunction("getAvailableItems") { (alsoPublishToEventListener: Bool, onlyIncludeActiveItems: Bool) async throws -> [[String: Any?]] in
+            logDebug("getAvailableItems called (legacy)")
             
-            let productStore = self.productStore!
-            
-            do {
-                let fetchedProducts = try await Product.products(for: skus)
-                await productStore.performOnActor { isolatedStore in
-                    fetchedProducts.forEach { product in
-                        isolatedStore.addProduct(product)
-                    }
-                }
-                let products = await productStore.getAllProducts()
-                return products.map { serializeProduct($0) }.compactMap { $0 }
-            } catch {
-                print("Error fetching items: \(error)")
-                throw error
-            }
+            let purchaseOptions = OpenIapGetAvailablePurchasesProps(
+                alsoPublishToEventListenerIOS: alsoPublishToEventListener,
+                onlyIncludeActiveItemsIOS: onlyIncludeActiveItems
+            )
+            let purchases = try await OpenIapModule.shared.getAvailablePurchases(purchaseOptions)
+            return OpenIapSerialization.purchases(purchases)
         }
-
-        AsyncFunction("requestProducts") { (skus: [String]) -> [[String: Any?]?] in
-            print("WARNING: requestProducts is deprecated. Use fetchProducts instead. The 'request' prefix should only be used for event-based operations. This method will be removed in version 3.0.0.")
+        
+        AsyncFunction("getPendingTransactionsIOS") { () async throws -> [[String: Any?]] in
+            logDebug("getPendingTransactionsIOS called")
             
-            try self.ensureConnection()
-            
-            let productStore = self.productStore!
-            
-            do {
-                let fetchedProducts = try await Product.products(for: skus)
-                await productStore.performOnActor { isolatedStore in
-                    fetchedProducts.forEach { product in
-                        isolatedStore.addProduct(product)
-                    }
-                }
-                let products = await productStore.getAllProducts()
-                return products.map { serializeProduct($0) }.compactMap { $0 }
-            } catch {
-                print("Error fetching items: \(error)")
-                throw error
-            }
+            let pendingTransactions = try await OpenIapModule.shared.getPendingTransactionsIOS()
+            return OpenIapSerialization.purchases(pendingTransactions)
         }
-
-        AsyncFunction("endConnection") { () -> Bool in
-            self.cleanupExistingState()
+        
+        AsyncFunction("clearTransactionIOS") { () async throws -> Bool in
+            logDebug("clearTransactionIOS called")
+            try await OpenIapModule.shared.clearTransactionIOS()
             return true
         }
-
-        AsyncFunction("getAvailableItems") {
-            (alsoPublishToEventListenerIOS: Bool, onlyIncludeActiveItemsIOS: Bool) -> [[String: Any?]?] in
+        
+        // MARK: - Receipt & Validation
+        
+        AsyncFunction("getReceiptIOS") { () async throws -> String in
+            logDebug("getReceiptIOS called")
+            return try await OpenIapModule.shared.getReceiptDataIOS() ?? ""
+        }
+        
+        AsyncFunction("requestReceiptRefreshIOS") { () async throws -> String in
+            logDebug("requestReceiptRefreshIOS called")
+            // Receipt refresh is handled automatically by StoreKit 2
+            return try await OpenIapModule.shared.getReceiptDataIOS() ?? ""
+        }
+        
+        AsyncFunction("validateReceiptIOS") { (sku: String) async throws -> [String: Any?] in
+            logDebug("validateReceiptIOS called for sku: \(sku)")
             
-            try self.ensureConnection()
+            // Use OpenIapReceiptValidationProps to keep naming parity with OpenIAP
+            let props = OpenIapReceiptValidationProps(sku: sku)
+            let result = try await OpenIapModule.shared.validateReceiptIOS(props)
             
-            var purchasedItemsSerialized: [[String: Any?]] = []
-
-            func addTransaction(transaction: Transaction, jwsRepresentationIOS: String? = nil) {
-                let serialized = serializeTransaction(transaction, jwsRepresentationIOS: jwsRepresentationIOS)
-                purchasedItemsSerialized.append(serialized)
-            }
-
-            if onlyIncludeActiveItemsIOS {
-                for await verification in Transaction.currentEntitlements {
-                    do {
-                        let transaction = try self.checkVerified(verification)
-                        if await self.productStore?.getProduct(productID: transaction.productID) != nil {
-                            addTransaction(transaction: transaction, jwsRepresentationIOS: verification.jwsRepresentation)
-                        }
-                    } catch {
-                        print("[ExpoIapModule] Failed to verify transaction: \(error)")
-                    }
-                }
-            } else {
-                for await verification in Transaction.all {
-                    do {
-                        let transaction = try self.checkVerified(verification)
-                        addTransaction(transaction: transaction, jwsRepresentationIOS: verification.jwsRepresentation)
-                    } catch {
-                        print("[ExpoIapModule] Failed to verify transaction: \(error)")
-                    }
-                }
-            }
-            return purchasedItemsSerialized
-        }
-
-        AsyncFunction("requestPurchase") {
-            (
-                sku: String, andDangerouslyFinishTransactionAutomatically: Bool,
-                appAccountToken: String?, quantity: Int, discountOffer: [String: String]?
-            ) -> [String: Any?]? in
-            
-            try self.ensureConnection()
-            let productStore = self.productStore!
-
-            let product: Product? = await productStore.getProduct(productID: sku)
-            if let product = product {
-                do {
-                    var options: Set<Product.PurchaseOption> = []
-                    if quantity > -1 {
-                        options.insert(.quantity(quantity))
-                    }
-                    if let offerID = discountOffer?["identifier"],
-                        let keyID = discountOffer?["keyIdentifier"],
-                        let nonce = discountOffer?["nonce"],
-                        let signature = discountOffer?["signature"],
-                        let timestamp = discountOffer?["timestamp"],
-                        let uuidNonce = UUID(uuidString: nonce),
-                        let signatureData = Data(base64Encoded: signature),
-                        let timestampInt = Int(timestamp)
-                    {
-                        options.insert(
-                            .promotionalOffer(
-                                offerID: offerID, keyID: keyID, nonce: uuidNonce,
-                                signature: signatureData, timestamp: timestampInt))
-                    }
-                    if let appAccountToken = appAccountToken,
-                        let appAccountUUID = UUID(uuidString: appAccountToken)
-                    {
-                        options.insert(.appAccountToken(appAccountUUID))
-                    }
-                    guard let windowScene = await self.currentWindowScene() else {
-                        let errorData = [
-                            "responseCode": IapErrorCode.serviceError,
-                            "debugMessage": "Could not find window scene",
-                            "code": IapErrorCode.serviceError,
-                            "message": "Could not find window scene",
-                            "productId": sku,
-                        ]
-                        self.sendEvent(IapEvent.PurchaseError, errorData)
-                        throw Exception(name: "ExpoIapModule", description: "Could not find window scene", code: IapErrorCode.serviceError)
-                    }
-                    let result: Product.PurchaseResult
-                    #if swift(>=5.9)
-                        if #available(iOS 17.0, tvOS 17.0, *) {
-                            result = try await product.purchase(
-                                confirmIn: windowScene, options: options)
-                        } else {
-                            #if !os(visionOS)
-                                result = try await product.purchase(options: options)
-                            #endif
-                        }
-                    #elseif !os(visionOS)
-                        result = try await product.purchase(options: options)
-                    #endif
-
-                    switch result {
-                    case .success(let verification):
-                        let transaction = try self.checkVerified(verification)
-                        
-                        let jwsRepresentation = verification.jwsRepresentation
-                        if !jwsRepresentation.isEmpty {
-                            logDebug("buyProduct JWS: exists")
-                            logDebug("buyProduct JWS length: \(jwsRepresentation.count)")
-                        } else {
-                            logDebug("buyProduct JWS: empty string")
-                        }
-                        
-                        if andDangerouslyFinishTransactionAutomatically {
-                            await transaction.finish()
-                            return nil
-                        } else {
-                            self.transactions[String(transaction.id)] = transaction
-                            let serialized = serializeTransaction(transaction, jwsRepresentationIOS: verification.jwsRepresentation)
-                            
-                            logDebug("buyProduct serialized includes JWS: \(serialized["jwsRepresentationIOS"] != nil)")
-                            
-                            self.sendEvent(IapEvent.PurchaseUpdated, serialized)
-                            return serialized
-                        }
-                    case .userCancelled:
-                        let errorData = [
-                            "responseCode": IapErrorCode.userCancelled,
-                            "debugMessage": "User cancelled the purchase",
-                            "code": IapErrorCode.userCancelled,
-                            "message": "User cancelled the purchase",
-                            "productId": sku,
-                        ]
-                        self.sendEvent(IapEvent.PurchaseError, errorData)
-                        throw Exception(name: "ExpoIapModule", description: "User cancelled the purchase", code: IapErrorCode.userCancelled)
-                    case .pending:
-                        let errorData = [
-                            "responseCode": IapErrorCode.deferredPayment,
-                            "debugMessage": "The payment was deferred",
-                            "code": IapErrorCode.deferredPayment,
-                            "message": "The payment was deferred",
-                            "productId": sku,
-                        ]
-                        self.sendEvent(IapEvent.PurchaseError, errorData)
-                        throw Exception(name: "ExpoIapModule", description: "The payment was deferred", code: IapErrorCode.deferredPayment)
-                    @unknown default:
-                        let errorData = [
-                            "responseCode": IapErrorCode.unknown,
-                            "debugMessage": "Unknown purchase result",
-                            "code": IapErrorCode.unknown,
-                            "message": "Unknown purchase result",
-                            "productId": sku,
-                        ]
-                        self.sendEvent(IapEvent.PurchaseError, errorData)
-                        throw Exception(name: "ExpoIapModule", description: "Unknown purchase result", code: IapErrorCode.unknown)
-                    }
-                } catch {
-                    if error is Exception {
-                        throw error
-                    }
-                    
-                    var errorCode = IapErrorCode.purchaseError
-                    var errorMessage = error.localizedDescription
-                    
-                    if let nsError = error as NSError? {
-                        switch nsError.domain {
-                        case "SKErrorDomain":
-                            switch nsError.code {
-                            case 0: // SKError.unknown
-                                errorCode = IapErrorCode.unknown
-                            case 1: // SKError.clientInvalid
-                                errorCode = IapErrorCode.serviceError
-                            case 2: // SKError.paymentCancelled
-                                errorCode = IapErrorCode.userCancelled
-                                errorMessage = "User cancelled the purchase"
-                            case 3: // SKError.paymentInvalid
-                                errorCode = IapErrorCode.userError
-                            case 4: // SKError.paymentNotAllowed
-                                errorCode = IapErrorCode.userError
-                                errorMessage = "Payment not allowed"
-                            case 5: // SKError.storeProductNotAvailable
-                                errorCode = IapErrorCode.itemUnavailable
-                            case 6: // SKError.cloudServicePermissionDenied
-                                errorCode = IapErrorCode.serviceError
-                            case 7: // SKError.cloudServiceNetworkConnectionFailed
-                                errorCode = IapErrorCode.networkError
-                            case 8: // SKError.cloudServiceRevoked
-                                errorCode = IapErrorCode.serviceError
-                            default:
-                                errorCode = IapErrorCode.purchaseError
-                            }
-                        case "NSURLErrorDomain":
-                            errorCode = IapErrorCode.networkError
-                            errorMessage = "Network error: \(error.localizedDescription)"
-                        default:
-                            errorCode = IapErrorCode.purchaseError
-                        }
-                    } else if error.localizedDescription.lowercased().contains("network") {
-                        errorCode = IapErrorCode.networkError
-                    } else if error.localizedDescription.lowercased().contains("cancelled") {
-                        errorCode = IapErrorCode.userCancelled
-                    }
-                    
-                    let errorData = [
-                        "responseCode": errorCode,
-                        "debugMessage": "Purchase failed: \(error.localizedDescription)",
-                        "code": errorCode,
-                        "message": errorMessage,
-                        "productId": sku,
-                    ]
-                    self.sendEvent(IapEvent.PurchaseError, errorData)
-                    throw Exception(name: "ExpoIapModule", description: errorMessage, code: errorCode)
-                }
-            } else {
-                let errorData = [
-                    "responseCode": IapErrorCode.itemUnavailable,
-                    "debugMessage": "Invalid product ID",
-                    "code": IapErrorCode.itemUnavailable,
-                    "message": "Invalid product ID",
-                    "productId": sku,
-                ]
-                self.sendEvent(IapEvent.PurchaseError, errorData)
-                throw Exception(name: "ExpoIapModule", description: "Invalid product ID", code: IapErrorCode.itemUnavailable)
-            }
-        }
-
-        AsyncFunction("isEligibleForIntroOfferIOS") { (groupID: String) -> Bool in
-            return await Product.SubscriptionInfo.isEligibleForIntroOffer(for: groupID)
-        }
-
-        AsyncFunction("subscriptionStatusIOS") { (sku: String) -> [[String: Any?]?]? in
-            try self.ensureConnection()
-            let productStore = self.productStore!
-
-            do {
-                let product = await productStore.getProduct(productID: sku)
-                let status: [Product.SubscriptionInfo.Status]? = try await product?.subscription?
-                    .status
-                guard let status = status else {
-                    return nil
-                }
-                return status.map { serializeSubscriptionStatus($0) }
-            } catch {
-                if error is Exception {
-                    throw error
-                }
-                throw Exception(name: "ExpoIapModule", description: "Error getting subscription status: \(error.localizedDescription)", code: IapErrorCode.serviceError)
-            }
-        }
-
-        AsyncFunction("currentEntitlementIOS") { (sku: String) -> [String: Any?]? in
-            try self.ensureConnection()
-            let productStore = self.productStore!
-
-            if let product = await productStore.getProduct(productID: sku) {
-                if let result = await product.currentEntitlement {
-                    do {
-                        let transaction = try self.checkVerified(result)
-                        return serializeTransaction(transaction)
-                    } catch StoreError.failedVerification {
-                        throw Exception(name: "ExpoIapModule", description: "Failed to verify transaction for sku \(sku)", code: IapErrorCode.transactionValidationFailed)
-                    } catch {
-                        if error is Exception {
-                            throw error
-                        }
-                        throw Exception(name: "ExpoIapModule", description: "Error fetching entitlement for sku \(sku): \(error.localizedDescription)", code: IapErrorCode.serviceError)
-                    }
-                } else {
-                    throw Exception(name: "ExpoIapModule", description: "Can't find entitlement for sku \(sku)", code: IapErrorCode.itemUnavailable)
-                }
-            } else {
-                throw Exception(name: "ExpoIapModule", description: "Can't find product for sku \(sku)", code: IapErrorCode.itemUnavailable)
-            }
-        }
-
-        AsyncFunction("latestTransactionIOS") { (sku: String) -> [String: Any?]? in
-            try self.ensureConnection()
-            let productStore = self.productStore!
-
-            if let product = await productStore.getProduct(productID: sku) {
-                if let result = await product.latestTransaction {
-                    do {
-                        let transaction = try self.checkVerified(result)
-                        return serializeTransaction(transaction)
-                    } catch StoreError.failedVerification {
-                        throw Exception(name: "ExpoIapModule", description: "Failed to verify transaction for sku \(sku)", code: IapErrorCode.transactionValidationFailed)
-                    } catch {
-                        if error is Exception {
-                            throw error
-                        }
-                        throw Exception(name: "ExpoIapModule", description: "Error fetching latest transaction for sku \(sku): \(error.localizedDescription)", code: IapErrorCode.serviceError)
-                    }
-                } else {
-                    throw Exception(name: "ExpoIapModule", description: "Can't find latest transaction for sku \(sku)", code: IapErrorCode.itemUnavailable)
-                }
-            } else {
-                throw Exception(name: "ExpoIapModule", description: "Can't find product for sku \(sku)", code: IapErrorCode.itemUnavailable)
-            }
-        }
-
-        AsyncFunction("finishTransaction") { (transactionIdentifier: String) -> Bool in
-            if let transaction = self.transactions[transactionIdentifier] {
-                await transaction.finish()
-                self.transactions.removeValue(forKey: transactionIdentifier)
-                return true
-            } else {
-                throw Exception(name: "ExpoIapModule", description: "Invalid transaction ID", code: IapErrorCode.developerError)
-            }
-        }
-
-        AsyncFunction("getPendingTransactionsIOS") { () -> [[String: Any?]?] in
-            return self.transactions.values.map { serializeTransaction($0) }
-        }
-
-        AsyncFunction("syncIOS") { () -> Bool in
-            do {
-                try await AppStore.sync()
-                return true
-            } catch {
-                if error is Exception {
-                    throw error
-                }
-                throw Exception(name: "ExpoIapModule", description: "Error synchronizing with the AppStore: \(error.localizedDescription)", code: IapErrorCode.syncError)
-            }
-        }
-
-        AsyncFunction("presentCodeRedemptionSheetIOS") { () -> Bool in
-            #if !os(tvOS)
-                SKPaymentQueue.default().presentCodeRedemptionSheet()
-                return true
-            #else
-                throw Exception(name: "ExpoIapModule", description: "This method is not available on tvOS", code: IapErrorCode.serviceError)
-            #endif
-        }
-
-        AsyncFunction("showManageSubscriptionsIOS") { () -> [[String: Any?]] in
-            #if !os(tvOS)
-                guard let windowScene = await self.currentWindowScene() else {
-                    throw Exception(name: "ExpoIapModule", description: "Cannot find window scene or not available on macOS", code: IapErrorCode.serviceError)
-                }
-                
-                var beforeStatuses: [String: Bool] = [:]
-                let subscriptionSkus = await self.getAllSubscriptionProductIds()
-                
-                for sku in subscriptionSkus {
-                    if let product = await self.productStore?.getProduct(productID: sku),
-                       let subscription = product.subscription {
-                        do {
-                            let statuses = try await subscription.status
-                            if let s = statuses.first(where: { status in
-                                if case .verified(let info) = status.renewalInfo {
-                                    return info.currentProductID == sku
-                                }
-                                return false
-                            }) {
-                                var willAutoRenew = false
-                                if case .verified(let info) = s.renewalInfo {
-                                    willAutoRenew = info.willAutoRenew
-                                }
-                                beforeStatuses[sku] = willAutoRenew
-                            }
-                        } catch {
-                            // ignore
-                        }
-                    }
-                }
-                
-                try await AppStore.showManageSubscriptions(in: windowScene)
-                
-                try? await Task.sleep(nanoseconds: subscriptionChangePropagationDelay)
-                
-                var updatedSubscriptions: [[String: Any?]] = []
-                
-                for sku in subscriptionSkus {
-                    if let product = await self.productStore?.getProduct(productID: sku),
-                       let subscription = product.subscription,
-                       let result = await product.latestTransaction {
-                        let statuses = try? await subscription.status
-                        let matchedStatus = statuses?.first(where: { status in
-                            if case .verified(let info) = status.renewalInfo {
-                                return info.currentProductID == sku
-                            }
-                            return false
-                        })
-                        
-                        var currentWillAutoRenew = false
-                        if let s = matchedStatus, case .verified(let info) = s.renewalInfo {
-                            currentWillAutoRenew = info.willAutoRenew
-                        }
-                        
-                        let previousWillAutoRenew = beforeStatuses[sku] ?? false
-                        if previousWillAutoRenew != currentWillAutoRenew {
-                            do {
-                                let transaction = try self.checkVerified(result)
-                                var purchaseMap = serializeTransaction(transaction, jwsRepresentationIOS: result.jwsRepresentation)
-                                purchaseMap["willAutoRenewIOS"] = currentWillAutoRenew
-                                updatedSubscriptions.append(purchaseMap)
-                            } catch {
-                                print("[ExpoIapModule] Failed to verify subscription change: \(error)")
-                            }
-                        }
-                    }
-                }
-                
-                return updatedSubscriptions
-            #else
-                throw Exception(name: "ExpoIapModule", description: "This method is not available on tvOS", code: IapErrorCode.serviceError)
-            #endif
-        }
-
-        AsyncFunction("clearTransactionIOS") { () -> Void in
-            Task {
-                for await result in Transaction.unfinished {
-                    do {
-                        let transaction = try self.checkVerified(result)
-                        await transaction.finish()
-                        self.transactions.removeValue(forKey: String(transaction.id))
-                    } catch {
-                        if error is Exception {
-                            throw error
-                        }
-                        print("Failed to finish transaction")
-                    }
-                }
-            }
-        }
-
-        AsyncFunction("beginRefundRequestIOS") { (sku: String) -> String? in
-            #if !os(tvOS)
-                try self.ensureConnection()
-                let productStore = self.productStore!
-                
-                guard let product = await productStore.getProduct(productID: sku),
-                    let result = await product.latestTransaction
-                else {
-                    throw Exception(name: "ExpoIapModule", description: "Can't find product or transaction for sku \(sku)", code: IapErrorCode.itemUnavailable)
-                }
-
-                do {
-                    let transaction = try self.checkVerified(result)
-                    guard let windowScene = await self.currentWindowScene() else {
-                        throw Exception(name: "ExpoIapModule", description: "Cannot find window scene or not available on macOS", code: IapErrorCode.serviceError)
-                    }
-                    let refundStatus = try await transaction.beginRefundRequest(in: windowScene)
-                    return serialize(refundStatus)
-                } catch StoreError.failedVerification {
-                    throw Exception(name: "ExpoIapModule", description: "Failed to verify transaction for sku \(sku)", code: IapErrorCode.transactionValidationFailed)
-                } catch {
-                    if error is Exception {
-                        throw error
-                    }
-                    throw Exception(name: "ExpoIapModule", description: "Failed to refund purchase: \(error.localizedDescription)", code: IapErrorCode.serviceError)
-                }
-            #else
-                throw Exception(name: "ExpoIapModule", description: "This method is not available on tvOS", code: IapErrorCode.serviceError)
-            #endif
-        }
-
-        // @deprecated - This function is deprecated and will be removed in v2.9.0
-        // The transaction observer is now managed automatically
-        Function("disable") { () -> Bool in
-            // No longer needed - observer management is automatic
-            return true
-        }
-
-        AsyncFunction("getReceiptDataIOS") { () -> String? in
-            return try self.getReceiptDataInternal()
-        }
-
-        AsyncFunction("isTransactionVerifiedIOS") { (sku: String) -> Bool in
-            try self.ensureConnection()
-            let productStore = self.productStore!
-            
-            if let product = await productStore.getProduct(productID: sku),
-               let result = await product.latestTransaction {
-                do {
-                    // If this doesn't throw, the transaction is verified
-                    _ = try self.checkVerified(result)
-                    return true
-                } catch {
-                    return false
-                }
-            }
-            return false
-        }
-
-        AsyncFunction("getTransactionJwsIOS") { (sku: String) -> String? in
-            try self.ensureConnection()
-            let productStore = self.productStore!
-            
-            if let product = await productStore.getProduct(productID: sku),
-               let result = await product.latestTransaction {
-                return result.jwsRepresentation
-            } else {
-                throw Exception(name: "ExpoIapModule", description: "Can't find transaction for sku \(sku)", code: IapErrorCode.itemUnavailable)
-            }
-        }
-
-        AsyncFunction("validateReceiptIOS") { (sku: String) -> [String: Any] in
-            try self.ensureConnection()
-            let productStore = self.productStore!
-            
-            // Get receipt data
-            var receiptData: String = ""
-            do {
-                receiptData = try self.getReceiptDataInternal()
-            } catch {
-                // Continue with validation even if receipt retrieval fails
-                // Error will be reflected by empty receipt data
-            }
-            
-            var isValid = false
-            var jwsRepresentation: String? = nil
-            var latestTransaction: [String: Any?]? = nil
-            
-            // Get JWS representation and verify transaction
-            if let product = await productStore.getProduct(productID: sku),
-               let result = await product.latestTransaction {
-                jwsRepresentation = result.jwsRepresentation
-                
-                do {
-                    // If this doesn't throw, the transaction is verified
-                    let transaction = try self.checkVerified(result)
-                    isValid = true
-                    latestTransaction = serializeTransaction(transaction, jwsRepresentationIOS: result.jwsRepresentation)
-                } catch {
-                    isValid = false
-                }
-            }
-
             return [
-                "isValid": isValid,
-                "receiptData": receiptData,
-                "jwsRepresentation": jwsRepresentation ?? "",
-                "latestTransaction": latestTransaction as Any
+                "isValid": result.isValid,
+                "receiptData": result.receiptData,
+                "jwsRepresentation": result.jwsRepresentation,
+                "latestTransaction": result.latestTransaction.map { OpenIapSerialization.purchase($0) },
             ]
         }
-    }
-
-    // Similar to Android's ensureConnection pattern
-    private func ensureConnection() throws {
-        guard isInitialized else {
-            throw Exception(
-                name: "ExpoIapModule", 
-                description: "Connection not initialized. Call initConnection() first.", 
-                code: IapErrorCode.notPrepared
-            )
+        
+        // MARK: - iOS Specific Features
+        
+        AsyncFunction("presentCodeRedemptionSheetIOS") { () async throws -> Bool in
+            logDebug("presentCodeRedemptionSheetIOS called")
+            let _ = try await OpenIapModule.shared.presentCodeRedemptionSheetIOS()
+            return true
         }
         
-        guard productStore != nil else {
-            throw Exception(
-                name: "ExpoIapModule", 
-                description: "Product store not available", 
-                code: IapErrorCode.notPrepared
-            )
-        }
-    }
-    
-    private func cleanupExistingState() {
-        // Cancel any existing tasks
-        updateListenerTask?.cancel()
-        updateListenerTask = nil
-        
-        // Clear collections
-        transactions.removeAll()
-        
-        // Reset promoted products
-        promotedPayment = nil
-        promotedProduct = nil
-        
-        // Remove existing payment observer if any
-        if let observer = paymentObserver {
-            SKPaymentQueue.default().remove(observer)
-            paymentObserver = nil
+        AsyncFunction("showManageSubscriptionsIOS") { () async throws -> Bool in
+            logDebug("showManageSubscriptionsIOS called")
+            let _ = try await OpenIapModule.shared.showManageSubscriptionsIOS()
+            return true
         }
         
-        // Clear product store
-        if let store = productStore {
-            Task {
-                await store.removeAll()
+        AsyncFunction("deepLinkToSubscriptionsIOS") { () async throws in
+            logDebug("deepLinkToSubscriptionsIOS called")
+            // Open App Store subscriptions page directly
+            if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                #if canImport(UIKit)
+                await MainActor.run {
+                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                }
+                #endif
             }
         }
-        productStore = nil
         
-        isInitialized = false
-    }
-    
-    private func addTransactionObserver() {
-        if updateListenerTask == nil {
-            updateListenerTask = listenForTransactions()
+        AsyncFunction("beginRefundRequestIOS") { (sku: String) async throws -> String? in
+            logDebug("beginRefundRequestIOS called for sku: \(sku)")
+            return try await OpenIapModule.shared.beginRefundRequestIOS(sku: sku)
         }
-    }
-
-    private func removeTransactionObserver() {
-        updateListenerTask?.cancel()
-        updateListenerTask = nil
-    }
-
-    private func listenForTransactions() -> Task<Void, Error> {
-        return Task.detached { [weak self] in
-            guard let self = self else { return }
-            for await result in Transaction.updates {
-                do {
-                    let transaction = try self.checkVerified(result)
-                    self.transactions[String(transaction.id)] = transaction
-                    if self.hasListeners {
-                        let serialized = serializeTransaction(transaction, jwsRepresentationIOS: result.jwsRepresentation)
-                        self.sendEvent(IapEvent.PurchaseUpdated, serialized)
-                    }
-                } catch {
-                    if self.hasListeners {
-                        let err = [
-                            "responseCode": IapErrorCode.transactionValidationFailed,
-                            "debugMessage": error.localizedDescription,
-                            "code": IapErrorCode.transactionValidationFailed,
-                            "message": error.localizedDescription,
-                        ]
-                        self.sendEvent(IapEvent.PurchaseError, err)
-                    }
+        
+        AsyncFunction("getPromotedProductIOS") { () async throws -> [String: Any?]? in
+            logDebug("getPromotedProductIOS called")
+            
+            if let promotedProduct = try await OpenIapModule.shared.getPromotedProductIOS() {
+                return [
+                    "productIdentifier": promotedProduct.productIdentifier,
+                    "localizedTitle": promotedProduct.localizedTitle,
+                    "localizedDescription": promotedProduct.localizedDescription,
+                    "price": promotedProduct.price,
+                    "priceLocale": [
+                        "currencyCode": promotedProduct.priceLocale.currencyCode,
+                        "currencySymbol": promotedProduct.priceLocale.currencySymbol
+                    ]
+                ]
+            }
+            return nil
+        }
+        
+        AsyncFunction("buyPromotedProductIOS") { () async throws in
+            logDebug("buyPromotedProductIOS called")
+            try await OpenIapModule.shared.requestPurchaseOnPromotedProductIOS()
+        }
+        
+        AsyncFunction("getStorefrontIOS") { () async throws -> String in
+            logDebug("getStorefrontIOS called")
+            return try await OpenIapModule.shared.getStorefrontIOS()
+        }
+        
+        AsyncFunction("syncIOS") { () async throws -> Bool in
+            logDebug("syncIOS called")
+            return try await OpenIapModule.shared.syncIOS()
+        }
+        
+        // MARK: - Additional iOS Methods
+        
+        AsyncFunction("isTransactionVerifiedIOS") { (sku: String) async throws -> Bool in
+            logDebug("isTransactionVerifiedIOS called for sku: \(sku)")
+            return await OpenIapModule.shared.isTransactionVerifiedIOS(sku: sku)
+        }
+        
+        AsyncFunction("getTransactionJwsIOS") { (sku: String) async throws -> String? in
+            logDebug("getTransactionJwsIOS called for sku: \(sku)")
+            return try await OpenIapModule.shared.getTransactionJwsIOS(sku: sku)
+        }
+        
+        AsyncFunction("isEligibleForIntroOfferIOS") { (groupID: String) async throws -> Bool in
+            logDebug("isEligibleForIntroOfferIOS called for groupID: \(groupID)")
+            return await OpenIapModule.shared.isEligibleForIntroOfferIOS(groupID: groupID)
+        }
+        
+        AsyncFunction("subscriptionStatusIOS") { (sku: String) async throws -> [[String: Any?]]? in
+            logDebug("subscriptionStatusIOS called for sku: \(sku)")
+            
+            if let statuses = try await OpenIapModule.shared.subscriptionStatusIOS(sku: sku) {
+                return statuses.map { status in
+                    return [
+                        "state": status.state,
+                        "autoRenewStatus": status.renewalInfo?.autoRenewStatus,
+                        "autoRenewPreference": status.renewalInfo?.autoRenewPreference,
+                        "expirationReason": status.renewalInfo?.expirationReason,
+                        "currentProductID": status.renewalInfo?.currentProductID,
+                        "gracePeriodExpirationDate": status.renewalInfo?.gracePeriodExpirationDate
+                    ]
                 }
             }
+            return nil
         }
-    }
-
-    public func startObserving() {
-        hasListeners = true
-        addTransactionObserver()
-    }
-
-    public func stopObserving() {
-        hasListeners = false
-        removeTransactionObserver()
-    }
-
-    private func currentWindowScene() async -> UIWindowScene? {
-        await MainActor.run {
-            return UIApplication.shared.connectedScenes.first as? UIWindowScene
+        
+        AsyncFunction("currentEntitlementIOS") { (sku: String) async throws -> [String: Any?]? in
+            logDebug("currentEntitlementIOS called for sku: \(sku)")
+            
+            if let entitlement = try await OpenIapModule.shared.currentEntitlementIOS(sku: sku) {
+                return OpenIapSerialization.purchase(entitlement)
+            }
+            return nil
         }
-    }
-
-    private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
-        switch result {
-        case .unverified(_, let error):
-            throw error
-        case .verified(let item):
-            return item
-        }
-    }
-
-    private func getAllSubscriptionProductIds() async -> [String] {
-        guard let productStore = self.productStore else { return [] }
-        let products = await productStore.getAllProducts()
-        return products.compactMap { product in
-            if product.subscription != nil {
-                return product.id
+        
+        AsyncFunction("latestTransactionIOS") { (sku: String) async throws -> [String: Any?]? in
+            logDebug("latestTransactionIOS called for sku: \(sku)")
+            
+            if let transaction = try await OpenIapModule.shared.latestTransactionIOS(sku: sku) {
+                return OpenIapSerialization.purchase(transaction)
             }
             return nil
         }
     }
-
-    private func getReceiptDataInternal() throws -> String {
-        if let appStoreReceiptURL = Bundle.main.appStoreReceiptURL,
-           FileManager.default.fileExists(atPath: appStoreReceiptURL.path) {
-            do {
-                let receiptData = try Data(contentsOf: appStoreReceiptURL, options: .alwaysMapped)
-                return receiptData.base64EncodedString(options: [])
-            } catch {
-                throw Exception(name: "ExpoIapModule", description: "Error reading receipt data: \(error.localizedDescription)", code: IapErrorCode.receiptFailed)
-            }
-        } else {
-            throw Exception(name: "ExpoIapModule", description: "App Store receipt not found", code: IapErrorCode.receiptFailed)
-        }
-    }
     
-    // Called by PaymentObserver when a promoted product is received
-    func handlePromotedProduct(payment: SKPayment, product: SKProduct) {
-        self.promotedPayment = payment
-        self.promotedProduct = product
+    // MARK: - Listeners Setup
+    
+    @MainActor
+    private func setupStore() {
+        logDebug("Setting up OpenIapModule event listeners")
         
-        if hasListeners {
-            let productData: [String: Any] = [
-                "productIdentifier": product.productIdentifier,
-                "localizedTitle": product.localizedTitle,
-                "localizedDescription": product.localizedDescription,
-                "price": product.price.doubleValue,
-                "priceLocale": [
-                    "currencyCode": product.priceLocale.currencyCode ?? "",
-                    "currencySymbol": product.priceLocale.currencySymbol ?? "",
-                    "countryCode": product.priceLocale.regionCode ?? ""
+        purchaseUpdatedSub = OpenIapModule.shared.purchaseUpdatedListener { [weak self] purchase in
+            Task { @MainActor in
+                guard let self else { return }
+                logDebug("✅ Purchase success callback - sending event")
+                let purchaseData = OpenIapSerialization.purchase(purchase)
+                self.sendEvent(OpenIapEvent.PurchaseUpdated, purchaseData)
+            }
+        }
+        
+        purchaseErrorSub = OpenIapModule.shared.purchaseErrorListener { [weak self] error in
+            Task { @MainActor in
+                guard let self else { return }
+                logDebug("❌ Purchase error callback - sending error event")
+                let errorData: [String: Any?] = [
+                    "code": error.code,
+                    "message": error.message,
+                    "productId": error.productId
                 ]
-            ]
-            sendEvent(IapEvent.PromotedProductIOS, productData)
+                self.sendEvent(OpenIapEvent.PurchaseError, errorData)
+            }
+        }
+        
+        promotedProductSub = OpenIapModule.shared.promotedProductListenerIOS { [weak self] productId in
+            Task { @MainActor in
+                guard let self else { return }
+                logDebug("📱 Promoted product callback - sending event for: \(productId)")
+                self.sendEvent(OpenIapEvent.PromotedProductIOS, ["productId": productId])
+            }
         }
     }
     
-    // Ensure cleanup when module is deallocated
-    deinit {
-        cleanupExistingState()
-    }
-}
-
-// PaymentObserver for handling promoted products
-@available(iOS 15.0, *)
-class PaymentObserver: NSObject, SKPaymentTransactionObserver {
-    weak var module: ExpoIapModule?
-    
-    init(module: ExpoIapModule) {
-        self.module = module
+    @MainActor
+    private func cleanupStore() async {
+        logDebug("Cleaning up listeners and ending connection")
+        if let sub = purchaseUpdatedSub { OpenIapModule.shared.removeListener(sub) }
+        if let sub = purchaseErrorSub { OpenIapModule.shared.removeListener(sub) }
+        if let sub = promotedProductSub { OpenIapModule.shared.removeListener(sub) }
+        purchaseUpdatedSub = nil
+        purchaseErrorSub = nil
+        promotedProductSub = nil
+        _ = try? await OpenIapModule.shared.endConnection()
     }
     
-    // Required by SKPaymentTransactionObserver protocol but not used
-    func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
-        // We don't handle transactions here as StoreKit 2 handles them in ExpoIapModule
-    }
-    
-    // Handle promoted products from App Store
-    func paymentQueue(_ queue: SKPaymentQueue, shouldAddStorePayment payment: SKPayment, for product: SKProduct) -> Bool {
-        module?.handlePromotedProduct(payment: payment, product: product)
-        // Return false to defer the payment
-        return false
-    }
 }

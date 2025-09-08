@@ -25,15 +25,15 @@ import {
   RequestSubscriptionProps,
   RequestPurchaseProps,
   SubscriptionProduct,
+  // Bring platform types from the barrel to avoid deep imports
+  PurchaseAndroid,
+  PaymentDiscount,
 } from './ExpoIap.types';
-import {PurchaseAndroid} from './types/ExpoIapAndroid.types';
-import {PaymentDiscount} from './types/ExpoIapIOS.types';
 
 // Export all types
 export * from './ExpoIap.types';
 export * from './modules/android';
 export * from './modules/ios';
-export type {AppTransactionIOS} from './types/ExpoIapIOS.types';
 
 // Export subscription helpers
 export {
@@ -45,7 +45,7 @@ export {
 // Get the native constant value
 export const PI = ExpoIapModule.PI;
 
-export enum IapEvent {
+export enum OpenIapEvent {
   PurchaseUpdated = 'purchase-updated',
   PurchaseError = 'purchase-error',
   /** @deprecated Use PurchaseUpdated instead. This will be removed in a future version. */
@@ -72,17 +72,33 @@ export const emitter = (ExpoIapModule || NativeModulesProxy.ExpoIap) as {
 export const purchaseUpdatedListener = (
   listener: (event: Purchase) => void,
 ) => {
+  console.log('[JS] Registering purchaseUpdatedListener');
+  const wrappedListener = (event: Purchase) => {
+    console.log('[JS] purchaseUpdatedListener fired:', event);
+    listener(event);
+  };
   const emitterSubscription = emitter.addListener(
-    IapEvent.PurchaseUpdated,
-    listener,
+    OpenIapEvent.PurchaseUpdated,
+    wrappedListener,
   );
+  console.log('[JS] purchaseUpdatedListener registered successfully');
   return emitterSubscription;
 };
 
 export const purchaseErrorListener = (
   listener: (error: PurchaseError) => void,
 ) => {
-  return emitter.addListener(IapEvent.PurchaseError, listener);
+  console.log('[JS] Registering purchaseErrorListener');
+  const wrappedListener = (error: PurchaseError) => {
+    console.log('[JS] purchaseErrorListener fired:', error);
+    listener(error);
+  };
+  const emitterSubscription = emitter.addListener(
+    OpenIapEvent.PurchaseError,
+    wrappedListener,
+  );
+  console.log('[JS] purchaseErrorListener registered successfully');
+  return emitterSubscription;
 };
 
 /**
@@ -114,7 +130,7 @@ export const promotedProductListenerIOS = (
     );
     return {remove: () => {}};
   }
-  return emitter.addListener(IapEvent.PromotedProductIOS, listener);
+  return emitter.addListener(OpenIapEvent.PromotedProductIOS, listener);
 };
 
 export function initConnection(): Promise<boolean> {
@@ -233,16 +249,19 @@ export const fetchProducts = async ({
   }
 
   if (Platform.OS === 'ios') {
-    const rawItems = await ExpoIapModule.fetchProducts(skus);
+    const rawItems = await ExpoIapModule.fetchProducts({skus, type});
+
     const filteredItems = rawItems.filter((item: unknown) => {
-      if (!isProductIOS(item)) return false;
-      return (
+      if (!isProductIOS(item)) {
+        return false;
+      }
+      const isValid =
         typeof item === 'object' &&
         item !== null &&
         'id' in item &&
         typeof item.id === 'string' &&
-        skus.includes(item.id)
-      );
+        skus.includes(item.id);
+      return isValid;
     });
 
     return type === 'inapp'
@@ -273,11 +292,11 @@ export const fetchProducts = async ({
 
 /**
  * @deprecated Use `fetchProducts` instead. This method will be removed in version 3.0.0.
- * 
+ *
  * The 'request' prefix should only be used for event-based operations that trigger
  * purchase flows. Since this function simply fetches product information, it has been
  * renamed to `fetchProducts` to follow OpenIAP terminology guidelines.
- * 
+ *
  * @example
  * ```typescript
  * // Old way (deprecated)
@@ -285,7 +304,7 @@ export const fetchProducts = async ({
  *   skus: ['com.example.product1'],
  *   type: 'inapp'
  * });
- * 
+ *
  * // New way (recommended)
  * const products = await fetchProducts({
  *   skus: ['com.example.product1'],
@@ -301,9 +320,9 @@ export const requestProducts = async ({
   type?: 'inapp' | 'subs';
 }): Promise<Product[] | SubscriptionProduct[]> => {
   console.warn(
-    "`requestProducts` is deprecated. Use `fetchProducts` instead. The 'request' prefix should only be used for event-based operations. This method will be removed in version 3.0.0."
+    "`requestProducts` is deprecated. Use `fetchProducts` instead. The 'request' prefix should only be used for event-based operations. This method will be removed in version 3.0.0.",
   );
-  return fetchProducts({ skus, type });
+  return fetchProducts({skus, type});
 };
 
 /**
@@ -326,8 +345,10 @@ export const getPurchaseHistory = ({
     '`getPurchaseHistory` is deprecated. Use `getPurchaseHistories` instead. This function will be removed in version 3.0.0.',
   );
   return getPurchaseHistories({
-    alsoPublishToEventListenerIOS: alsoPublishToEventListenerIOS ?? alsoPublishToEventListener,
-    onlyIncludeActiveItemsIOS: onlyIncludeActiveItemsIOS ?? onlyIncludeActiveItems,
+    alsoPublishToEventListenerIOS:
+      alsoPublishToEventListenerIOS ?? alsoPublishToEventListener,
+    onlyIncludeActiveItemsIOS:
+      onlyIncludeActiveItemsIOS ?? onlyIncludeActiveItems,
   });
 };
 
@@ -390,8 +411,9 @@ export const getAvailablePurchases = ({
         ),
       android: async () => {
         const products = await ExpoIapModule.getAvailableItemsByType('inapp');
-        const subscriptions =
-          await ExpoIapModule.getAvailableItemsByType('subs');
+        const subscriptions = await ExpoIapModule.getAvailableItemsByType(
+          'subs',
+        );
         return products.concat(subscriptions);
       },
     }) || (() => Promise.resolve([]))
@@ -465,11 +487,7 @@ const normalizeRequestProps = (
  */
 export const requestPurchase = (
   requestObj: PurchaseRequest,
-): Promise<
-  | Purchase
-  | Purchase[]
-  | void
-> => {
+): Promise<Purchase | Purchase[] | void> => {
   const {request, type = 'inapp'} = requestObj;
 
   if (Platform.OS === 'ios') {
@@ -491,17 +509,15 @@ export const requestPurchase = (
 
     return (async () => {
       const offer = offerToRecordIOS(withOffer);
-      const purchase = await ExpoIapModule.requestPurchase(
+      const purchase = await ExpoIapModule.requestPurchase({
         sku,
         andDangerouslyFinishTransactionAutomatically,
         appAccountToken,
-        quantity ?? -1,
-        offer,
-      );
+        quantity,
+        withOffer: offer,
+      });
 
-      return type === 'inapp'
-        ? (purchase as Purchase)
-        : (purchase as Purchase);
+      return type === 'inapp' ? (purchase as Purchase) : (purchase as Purchase);
     })();
   }
 
@@ -629,10 +645,11 @@ export const finishTransaction = ({
       },
       android: async () => {
         const androidPurchase = purchase as PurchaseAndroid;
-        
+
         // Use purchaseToken if available, fallback to purchaseTokenAndroid for backward compatibility
-        const token = androidPurchase.purchaseToken || androidPurchase.purchaseTokenAndroid;
-        
+        const token =
+          androidPurchase.purchaseToken || androidPurchase.purchaseTokenAndroid;
+
         if (!token) {
           return Promise.reject(
             new PurchaseError(
@@ -642,8 +659,8 @@ export const finishTransaction = ({
               undefined,
               'E_DEVELOPER_ERROR' as ErrorCode,
               androidPurchase.productId,
-              'android'
-            )
+              'android',
+            ),
           );
         }
 
@@ -676,7 +693,7 @@ export const getStorefrontIOS = (): Promise<string> => {
     console.warn('getStorefrontIOS: This method is only available on iOS');
     return Promise.resolve('');
   }
-  return ExpoIapModule.getStorefront();
+  return ExpoIapModule.getStorefrontIOS();
 };
 
 /**

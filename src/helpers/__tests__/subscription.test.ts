@@ -4,13 +4,10 @@ jest.mock('../../index', () => ({
 }));
 
 /* eslint-disable import/first */
-import {
-  getActiveSubscriptions,
-  hasActiveSubscriptions,
-} from '../subscription';
-import type { Purchase } from '../../ExpoIap.types';
-import { Platform } from 'react-native';
-import { getAvailablePurchases } from '../../index';
+import {getActiveSubscriptions, hasActiveSubscriptions} from '../subscription';
+import type {Purchase} from '../../ExpoIap.types';
+import {Platform} from 'react-native';
+import {getAvailablePurchases} from '../../index';
 /* eslint-enable import/first */
 
 describe('Subscription Helper Functions', () => {
@@ -36,7 +33,7 @@ describe('Subscription Helper Functions', () => {
             transactionDate: currentTime,
             platform: 'ios',
             transactionReceipt: 'receipt',
-            expirationDateIOS: currentTime + (7 * oneDayMs), // Expires in 7 days
+            expirationDateIOS: currentTime + 7 * oneDayMs, // Expires in 7 days
             environmentIOS: 'Production',
           } as Purchase,
         ];
@@ -62,7 +59,7 @@ describe('Subscription Helper Functions', () => {
             id: 'trans-123',
             productId: 'test.subscription',
             transactionId: 'trans-123',
-            transactionDate: currentTime - (10 * oneDayMs),
+            transactionDate: currentTime - 10 * oneDayMs,
             platform: 'ios',
             transactionReceipt: 'receipt',
             expirationDateIOS: currentTime - oneDayMs, // Expired yesterday
@@ -82,7 +79,7 @@ describe('Subscription Helper Functions', () => {
             id: 'trans-123',
             productId: 'test.subscription',
             transactionId: 'trans-123',
-            transactionDate: currentTime - (12 * 60 * 60 * 1000), // 12 hours ago
+            transactionDate: currentTime - 12 * 60 * 60 * 1000, // 12 hours ago
             platform: 'ios',
             transactionReceipt: 'receipt',
             environmentIOS: 'Sandbox',
@@ -107,7 +104,7 @@ describe('Subscription Helper Functions', () => {
             transactionDate: currentTime,
             platform: 'ios',
             transactionReceipt: 'receipt',
-            expirationDateIOS: currentTime + (7 * oneDayMs),
+            expirationDateIOS: currentTime + 7 * oneDayMs,
           } as Purchase,
           {
             id: 'trans-456',
@@ -116,7 +113,7 @@ describe('Subscription Helper Functions', () => {
             transactionDate: currentTime,
             platform: 'ios',
             transactionReceipt: 'receipt',
-            expirationDateIOS: currentTime + (7 * oneDayMs),
+            expirationDateIOS: currentTime + 7 * oneDayMs,
           } as Purchase,
         ];
 
@@ -137,7 +134,7 @@ describe('Subscription Helper Functions', () => {
             transactionDate: currentTime,
             platform: 'ios',
             transactionReceipt: 'receipt',
-            expirationDateIOS: currentTime + (5 * oneDayMs), // 5 days remaining
+            expirationDateIOS: currentTime + 5 * oneDayMs, // 5 days remaining
           } as Purchase,
         ];
 
@@ -159,7 +156,7 @@ describe('Subscription Helper Functions', () => {
             platform: 'ios',
             transactionReceipt: 'receipt',
             purchaseToken: 'jwt-token-example',
-            expirationDateIOS: currentTime + (7 * oneDayMs),
+            expirationDateIOS: currentTime + 7 * oneDayMs,
           } as Purchase,
         ];
 
@@ -179,7 +176,7 @@ describe('Subscription Helper Functions', () => {
             transactionDate: currentTime,
             platform: 'ios',
             transactionReceipt: 'receipt',
-            expirationDateIOS: currentTime + (10 * oneDayMs), // 10 days remaining
+            expirationDateIOS: currentTime + 10 * oneDayMs, // 10 days remaining
           } as Purchase,
         ];
 
@@ -298,7 +295,9 @@ describe('Subscription Helper Functions', () => {
       });
 
       it('should return empty array when getAvailablePurchases throws error', async () => {
-        (getAvailablePurchases as jest.Mock).mockRejectedValue(new Error('Network error'));
+        (getAvailablePurchases as jest.Mock).mockRejectedValue(
+          new Error('Network error'),
+        );
 
         const result = await getActiveSubscriptions();
 
@@ -315,7 +314,7 @@ describe('Subscription Helper Functions', () => {
             transactionDate: currentTime,
             platform: 'ios',
             transactionReceipt: 'receipt',
-            expirationDateIOS: currentTime + (7 * oneDayMs),
+            expirationDateIOS: currentTime + 7 * oneDayMs,
           } as Purchase,
           {
             id: 'trans-456',
@@ -324,7 +323,7 @@ describe('Subscription Helper Functions', () => {
             transactionDate: currentTime,
             platform: 'ios',
             transactionReceipt: 'receipt',
-            expirationDateIOS: currentTime + (7 * oneDayMs),
+            expirationDateIOS: currentTime + 7 * oneDayMs,
           } as Purchase,
         ];
 
@@ -356,7 +355,7 @@ describe('Subscription Helper Functions', () => {
           transactionDate: currentTime,
           platform: 'ios',
           transactionReceipt: 'receipt',
-          expirationDateIOS: currentTime + (7 * oneDayMs),
+          expirationDateIOS: currentTime + 7 * oneDayMs,
         } as Purchase,
       ];
 
@@ -385,7 +384,7 @@ describe('Subscription Helper Functions', () => {
           transactionDate: currentTime,
           platform: 'ios',
           transactionReceipt: 'receipt',
-          expirationDateIOS: currentTime + (7 * oneDayMs),
+          expirationDateIOS: currentTime + 7 * oneDayMs,
         } as Purchase,
       ];
 
