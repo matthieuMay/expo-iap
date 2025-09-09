@@ -197,7 +197,7 @@ public class ExpoIapModule: Module {
                 logDebug("Purchase request completed successfully")
             } catch {
                 logDebug("Purchase request failed with error: \(error)")
-                throw error
+                throw OpenIapError.storeKitError(error: error)
             }
         }
         
@@ -263,19 +263,21 @@ public class ExpoIapModule: Module {
         
         AsyncFunction("validateReceiptIOS") { (sku: String) async throws -> [String: Any?] in
             logDebug("validateReceiptIOS called for sku: \(sku)")
-            
-            // Use OpenIapReceiptValidationProps to keep naming parity with OpenIAP
-            let props = OpenIapReceiptValidationProps(sku: sku)
-            let result = try await OpenIapModule.shared.validateReceiptIOS(props)
-            
-            return [
-                "isValid": result.isValid,
-                "receiptData": result.receiptData,
-                "jwsRepresentation": result.jwsRepresentation,
-                // Populate unified purchaseToken for iOS as alias of JWS
-                "purchaseToken": result.jwsRepresentation,
-                "latestTransaction": result.latestTransaction.map { OpenIapSerialization.purchase($0) },
-            ]
+            do {
+                // Use OpenIapReceiptValidationProps to keep naming parity with OpenIAP
+                let props = OpenIapReceiptValidationProps(sku: sku)
+                let result = try await OpenIapModule.shared.validateReceiptIOS(props)
+                return [
+                    "isValid": result.isValid,
+                    "receiptData": result.receiptData,
+                    "jwsRepresentation": result.jwsRepresentation,
+                    // Populate unified purchaseToken for iOS as alias of JWS
+                    "purchaseToken": result.jwsRepresentation,
+                    "latestTransaction": result.latestTransaction.map { OpenIapSerialization.purchase($0) },
+                ]
+            } catch {
+                throw OpenIapError.invalidReceipt
+            }
         }
         
         // MARK: - iOS Specific Features
@@ -394,20 +396,26 @@ public class ExpoIapModule: Module {
         
         AsyncFunction("currentEntitlementIOS") { (sku: String) async throws -> [String: Any?]? in
             logDebug("currentEntitlementIOS called for sku: \(sku)")
-            
-            if let entitlement = try await OpenIapModule.shared.currentEntitlementIOS(sku: sku) {
-                return OpenIapSerialization.purchase(entitlement)
+            do {
+                if let entitlement = try await OpenIapModule.shared.currentEntitlementIOS(sku: sku) {
+                    return OpenIapSerialization.purchase(entitlement)
+                }
+                return nil
+            } catch {
+                throw OpenIapError.productNotFound(id: sku)
             }
-            return nil
         }
         
         AsyncFunction("latestTransactionIOS") { (sku: String) async throws -> [String: Any?]? in
             logDebug("latestTransactionIOS called for sku: \(sku)")
-            
-            if let transaction = try await OpenIapModule.shared.latestTransactionIOS(sku: sku) {
-                return OpenIapSerialization.purchase(transaction)
+            do {
+                if let transaction = try await OpenIapModule.shared.latestTransactionIOS(sku: sku) {
+                    return OpenIapSerialization.purchase(transaction)
+                }
+                return nil
+            } catch {
+                throw OpenIapError.productNotFound(id: sku)
             }
-            return nil
         }
     }
     
