@@ -271,4 +271,4 @@ If you encounter any issues during migration:
 
 - Check our [GitHub Issues](https://github.com/hyochan/expo-iap/issues)
 - Join our [Slack community](https://hyo.dev/joinSlack)
-- Review the [full documentation](https://expo-iap.hyo.dev)
+- Review the [full documentation](https://hyochan.github.io/expo-iap)

@@ -417,8 +417,8 @@ We welcome feature requests! Please:
 
 ## 📚 Additional Resources
 
-- [Documentation Site](https://expo-iap.hyo.dev)
-- [API Reference](https://expo-iap.hyo.dev/docs/api/use-iap)
+- [Documentation Site](https://hyochan.github.io/expo-iap)
+- [API Reference](https://hyochan.github.io/expo-iap/docs/api/use-iap)
 - [Example App](./example)
 
 Thank you for contributing to expo-iap! 🎉
