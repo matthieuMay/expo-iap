@@ -107,7 +107,7 @@ public class ExpoIapModule: Module {
             // Validate SKUs
             guard !skus.isEmpty else {
                 logDebug("ERROR: Empty SKUs array!")
-                throw OpenIapError.purchaseFailed(reason: "Empty SKU list provided")
+                throw OpenIapFailure.purchaseFailed(reason: "Empty SKU list provided")
             }
             
             // Convert string to OpenIapRequestProductType enum
@@ -146,7 +146,7 @@ public class ExpoIapModule: Module {
         AsyncFunction("requestPurchase") { (params: [String: Any]) async throws in
             // Extract and validate required fields
             guard let sku = params["sku"] as? String, !sku.isEmpty else {
-                throw OpenIapError.purchaseFailed(reason: "Missing required 'sku'")
+                throw OpenIapFailure.purchaseFailed(reason: "Missing required 'sku'")
             }
 
             // Optional fields
@@ -197,7 +197,7 @@ public class ExpoIapModule: Module {
                 logDebug("Purchase request completed successfully")
             } catch {
                 logDebug("Purchase request failed with error: \(error)")
-                throw OpenIapError.storeKitError(error: error)
+                throw OpenIapFailure.storeKitError(error: error)
             }
         }
         
@@ -276,7 +276,7 @@ public class ExpoIapModule: Module {
                     "latestTransaction": result.latestTransaction.map { OpenIapSerialization.purchase($0) },
                 ]
             } catch {
-                throw OpenIapError.invalidReceipt
+                throw OpenIapFailure.invalidReceipt
             }
         }
         
@@ -402,7 +402,7 @@ public class ExpoIapModule: Module {
                 }
                 return nil
             } catch {
-                throw OpenIapError.productNotFound(id: sku)
+                throw OpenIapFailure.productNotFound(id: sku)
             }
         }
         
@@ -414,7 +414,7 @@ public class ExpoIapModule: Module {
                 }
                 return nil
             } catch {
-                throw OpenIapError.productNotFound(id: sku)
+                throw OpenIapFailure.productNotFound(id: sku)
             }
         }
     }
@@ -434,7 +434,7 @@ public class ExpoIapModule: Module {
             }
         }
         
-        purchaseErrorSub = OpenIapModule.shared.purchaseErrorListener { [weak self] (event: OpenIapErrorEvent) in
+        purchaseErrorSub = OpenIapModule.shared.purchaseErrorListener { [weak self] event in
             Task { @MainActor in
                 guard let self else { return }
                 logDebug("❌ Purchase error callback - sending error event")

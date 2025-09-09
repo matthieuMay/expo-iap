@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [2.9.3] - 2025-09-10
+
+### Fixed
+
+- iOS: replace thrown `OpenIapError.*` and nonexistent types with `OpenIapFailure` cases to resolve build errors and align with error mapping
+- iOS: remove explicit `OpenIapErrorEvent` annotation in Swift listener (type is inferred from OpenIAP API)
+
+### Notes
+
+- If your CocoaPods CDN is flaky, `pod install --repo-update` or temporarily pin `openiap` in your app Podfile.
+
 ## [2.9.1] - 2025-09-09
 
 ### Added
