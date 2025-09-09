@@ -312,17 +312,12 @@ public class ExpoIapModule: Module {
         AsyncFunction("getPromotedProductIOS") { () async throws -> [String: Any?]? in
             logDebug("getPromotedProductIOS called")
             
-            if let promotedProduct = try await OpenIapModule.shared.getPromotedProductIOS() {
-                return [
-                    "productIdentifier": promotedProduct.productIdentifier,
-                    "localizedTitle": promotedProduct.localizedTitle,
-                    "localizedDescription": promotedProduct.localizedDescription,
-                    "price": promotedProduct.price,
-                    "priceLocale": [
-                        "currencyCode": promotedProduct.priceLocale.currencyCode,
-                        "currencySymbol": promotedProduct.priceLocale.currencySymbol
-                    ]
-                ]
+            if let promoted = try await OpenIapModule.shared.getPromotedProductIOS() {
+                // Fetch full product info by SKU to conform to OpenIapProduct
+                let request = OpenIapProductRequest(skus: [promoted.productIdentifier], type: .all)
+                let products = try await OpenIapModule.shared.fetchProducts(request)
+                let serialized = OpenIapSerialization.products(products)
+                return serialized.first
             }
             return nil
         }
@@ -357,15 +352,41 @@ public class ExpoIapModule: Module {
             logDebug("subscriptionStatusIOS called for sku: \(sku)")
             
             if let statuses = try await OpenIapModule.shared.subscriptionStatusIOS(sku: sku) {
+                // Align output with SubscriptionStatusIOS in TS:
+                // { state: SubscriptionState; renewalInfo?: { jsonRepresentation?: string; willAutoRenew: boolean; autoRenewPreference?: string } }
                 return statuses.map { status in
-                    return [
-                        "state": status.state,
-                        "autoRenewStatus": status.renewalInfo?.autoRenewStatus,
-                        "autoRenewPreference": status.renewalInfo?.autoRenewPreference,
-                        "expirationReason": status.renewalInfo?.expirationReason,
-                        "currentProductID": status.renewalInfo?.currentProductID,
-                        "gracePeriodExpirationDate": status.renewalInfo?.gracePeriodExpirationDate
+                    var dict: [String: Any?] = [
+                        "state": status.state
                     ]
+
+                    if let info = status.renewalInfo {
+                        // Convert autoRenewStatus to a proper boolean for willAutoRenew
+                        let willAutoRenew: Bool = {
+                            // Try boolean first
+                            if let b = info.autoRenewStatus as? Bool { return b }
+                            // Fallback to string normalization
+                            let normalized = String(describing: info.autoRenewStatus).lowercased()
+                            let truthy = Set([
+                                "willrenew",
+                                "will_autorenew",
+                                "will-auto-renew",
+                                "auto_renew_on",
+                                "true",
+                                "1",
+                                "on",
+                                "yes",
+                            ])
+                            return truthy.contains(normalized)
+                        }()
+
+                        let renewalInfo: [String: Any?] = [
+                            "willAutoRenew": willAutoRenew,
+                            "autoRenewPreference": info.autoRenewPreference
+                        ]
+                        dict["renewalInfo"] = renewalInfo
+                    }
+
+                    return dict
                 }
             }
             return nil
@@ -405,16 +426,14 @@ public class ExpoIapModule: Module {
             }
         }
         
-        purchaseErrorSub = OpenIapModule.shared.purchaseErrorListener { [weak self] error in
+        purchaseErrorSub = OpenIapModule.shared.purchaseErrorListener { [weak self] (event: OpenIapErrorEvent) in
             Task { @MainActor in
                 guard let self else { return }
                 logDebug("❌ Purchase error callback - sending error event")
-                // Use OpenIapPurchaseError alias for clarity/parity
-                let err: OpenIapPurchaseError = error
                 let errorData: [String: Any?] = [
-                    "code": err.code,
-                    "message": err.message,
-                    "productId": err.productId,
+                    "code": event.code,
+                    "message": event.message,
+                    "productId": event.productId
                 ]
                 self.sendEvent(OpenIapEvent.PurchaseError, errorData)
             }

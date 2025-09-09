@@ -143,7 +143,12 @@ export const getProducts = async (skus: string[]): Promise<Product[]> => {
     "`getProducts` is deprecated. Use `fetchProducts({ skus, type: 'inapp' })` instead. This function will be removed in version 3.0.0.",
   );
   if (!skus?.length) {
-    return Promise.reject(new Error('"skus" is required'));
+    return Promise.reject(
+      new PurchaseError({
+        message: 'No SKUs provided',
+        code: ErrorCode.E_EMPTY_SKU_LIST,
+      }),
+    );
   }
 
   return Platform.select({
@@ -177,7 +182,12 @@ export const getSubscriptions = async (
     "`getSubscriptions` is deprecated. Use `fetchProducts({ skus, type: 'subs' })` instead. This function will be removed in version 3.0.0.",
   );
   if (!skus?.length) {
-    return Promise.reject(new Error('"skus" is required'));
+    return Promise.reject(
+      new PurchaseError({
+        message: 'No SKUs provided',
+        code: ErrorCode.E_EMPTY_SKU_LIST,
+      }),
+    );
   }
 
   return Platform.select({
@@ -245,7 +255,10 @@ export const fetchProducts = async ({
   type?: 'inapp' | 'subs';
 }): Promise<Product[] | SubscriptionProduct[]> => {
   if (!skus?.length) {
-    throw new Error('No SKUs provided');
+    throw new PurchaseError({
+      message: 'No SKUs provided',
+      code: ErrorCode.E_EMPTY_SKU_LIST,
+    });
   }
 
   if (Platform.OS === 'ios') {
@@ -618,15 +631,12 @@ export const finishTransaction = ({
 
         if (!token) {
           return Promise.reject(
-            new PurchaseError(
-              '[expo-iap]: PurchaseError',
-              'Purchase token is required to finish transaction',
-              undefined,
-              undefined,
-              'E_DEVELOPER_ERROR' as ErrorCode,
-              androidPurchase.productId,
-              'android',
-            ),
+            new PurchaseError({
+              message: 'Purchase token is required to finish transaction',
+              code: 'E_DEVELOPER_ERROR' as ErrorCode,
+              productId: androidPurchase.productId,
+              platform: 'android',
+            }),
           );
         }
 

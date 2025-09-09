@@ -112,6 +112,16 @@ export enum ErrorCode {
   E_ALREADY_PREPARED = 'E_ALREADY_PREPARED',
   E_PENDING = 'E_PENDING',
   E_CONNECTION_CLOSED = 'E_CONNECTION_CLOSED',
+  // Additional detailed errors (Android-focused, kept cross-platform)
+  E_INIT_CONNECTION = 'E_INIT_CONNECTION',
+  E_SERVICE_DISCONNECTED = 'E_SERVICE_DISCONNECTED',
+  E_QUERY_PRODUCT = 'E_QUERY_PRODUCT',
+  E_SKU_NOT_FOUND = 'E_SKU_NOT_FOUND',
+  E_SKU_OFFER_MISMATCH = 'E_SKU_OFFER_MISMATCH',
+  E_ITEM_NOT_OWNED = 'E_ITEM_NOT_OWNED',
+  E_BILLING_UNAVAILABLE = 'E_BILLING_UNAVAILABLE',
+  E_FEATURE_NOT_SUPPORTED = 'E_FEATURE_NOT_SUPPORTED',
+  E_EMPTY_SKU_LIST = 'E_EMPTY_SKU_LIST',
 }
 
 /**
@@ -172,26 +182,59 @@ export const ErrorCodeMapping = {
     [ErrorCode.E_ALREADY_PREPARED]: 'E_ALREADY_PREPARED',
     [ErrorCode.E_PENDING]: 'E_PENDING',
     [ErrorCode.E_CONNECTION_CLOSED]: 'E_CONNECTION_CLOSED',
+    [ErrorCode.E_INIT_CONNECTION]: 'E_INIT_CONNECTION',
+    [ErrorCode.E_SERVICE_DISCONNECTED]: 'E_SERVICE_DISCONNECTED',
+    [ErrorCode.E_QUERY_PRODUCT]: 'E_QUERY_PRODUCT',
+    [ErrorCode.E_SKU_NOT_FOUND]: 'E_SKU_NOT_FOUND',
+    [ErrorCode.E_SKU_OFFER_MISMATCH]: 'E_SKU_OFFER_MISMATCH',
+    [ErrorCode.E_ITEM_NOT_OWNED]: 'E_ITEM_NOT_OWNED',
+    [ErrorCode.E_BILLING_UNAVAILABLE]: 'E_BILLING_UNAVAILABLE',
+    [ErrorCode.E_FEATURE_NOT_SUPPORTED]: 'E_FEATURE_NOT_SUPPORTED',
+    [ErrorCode.E_EMPTY_SKU_LIST]: 'E_EMPTY_SKU_LIST',
   },
 } as const;
 
+export type PurchaseErrorProps = {
+  message: string;
+  responseCode?: number;
+  debugMessage?: string;
+  code?: ErrorCode;
+  productId?: string;
+  platform?: 'ios' | 'android';
+};
+
 export class PurchaseError implements Error {
-  constructor(
-    public name: string,
-    public message: string,
-    public responseCode?: number,
-    public debugMessage?: string,
-    public code?: ErrorCode,
-    public productId?: string,
-    public platform?: 'ios' | 'android',
-  ) {
+  public name: string;
+  public message: string;
+  public responseCode?: number;
+  public debugMessage?: string;
+  public code?: ErrorCode;
+  public productId?: string;
+  public platform?: 'ios' | 'android';
+
+  // Backwards-compatible constructor: accepts either props object or legacy positional args
+  constructor(messageOrProps: string | PurchaseErrorProps, ...rest: any[]) {
     this.name = '[expo-iap]: PurchaseError';
-    this.message = message;
-    this.responseCode = responseCode;
-    this.debugMessage = debugMessage;
-    this.code = code;
-    this.productId = productId;
-    this.platform = platform;
+
+    if (typeof messageOrProps === 'string') {
+      // Legacy signature: (name, message, responseCode?, debugMessage?, code?, productId?, platform?)
+      // The first legacy argument was a name which we always override, so treat it as message here
+      const message = messageOrProps;
+      this.message = message;
+      this.responseCode = rest[0];
+      this.debugMessage = rest[1];
+      this.code = rest[2];
+      this.productId = rest[3];
+      this.platform = rest[4];
+    } else {
+      const props = messageOrProps;
+      this.message = props.message;
+      this.responseCode = props.responseCode;
+      this.debugMessage = props.debugMessage;
+      this.code = props.code;
+      this.productId = props.productId;
+      this.platform = props.platform;
+    }
   }
 
   /**
@@ -208,15 +251,14 @@ export class PurchaseError implements Error {
       ? ErrorCodeUtils.fromPlatformCode(errorData.code, platform)
       : ErrorCode.E_UNKNOWN;
 
-    return new PurchaseError(
-      '[expo-iap]: PurchaseError',
-      errorData.message || 'Unknown error occurred',
-      errorData.responseCode,
-      errorData.debugMessage,
-      errorCode,
-      errorData.productId,
+    return new PurchaseError({
+      message: errorData.message || 'Unknown error occurred',
+      responseCode: errorData.responseCode,
+      debugMessage: errorData.debugMessage,
+      code: errorCode,
+      productId: errorData.productId,
       platform,
-    );
+    });
   }
 
   /**
@@ -252,8 +294,16 @@ export const ErrorCodeUtils = {
     platformCode: string | number,
     platform: 'ios' | 'android',
   ): ErrorCode => {
-    const mapping = ErrorCodeMapping[platform];
+    // Prefer dynamic native mapping for iOS to avoid drift
+    if (platform === 'ios') {
+      for (const [key, value] of Object.entries(NATIVE_ERROR_CODES || {})) {
+        if (value === platformCode) {
+          return key as ErrorCode;
+        }
+      }
+    }
 
+    const mapping = ErrorCodeMapping[platform];
     for (const [errorCode, mappedCode] of Object.entries(mapping)) {
       if (mappedCode === platformCode) {
         return errorCode as ErrorCode;
@@ -273,10 +323,15 @@ export const ErrorCodeUtils = {
     errorCode: ErrorCode,
     platform: 'ios' | 'android',
   ): string | number => {
-    return (
-      ErrorCodeMapping[platform][errorCode] ??
-      (platform === 'ios' ? 0 : 'E_UNKNOWN')
-    );
+    if (platform === 'ios') {
+      const native = NATIVE_ERROR_CODES?.[errorCode];
+      if (native !== undefined) return native;
+    }
+    const mapping = ErrorCodeMapping[platform] as Record<
+      ErrorCode,
+      string | number
+    >;
+    return mapping[errorCode] ?? (platform === 'ios' ? 0 : 'E_UNKNOWN');
   },
 
   /**
