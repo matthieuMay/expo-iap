@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2.9.1] - 2025-09-09
+
+### Added
+
+- Expanded error codes and mappings (Android parity) with friendly messages in utilities
+- New object-style `PurchaseError` constructor and guideline in docs (legacy positional args remain supported)
+- Docs site can build for GitHub Pages via dynamic `baseUrl` switch
+- Example iOS: pin `openiap` to `1.1.7` via Git to avoid CocoaPods index lag
+
+### Changed
+
+- iOS: `getPromotedProductIOS` now returns a fully serialized Product (fetch by SKU then serialize)
+- iOS: `subscriptionStatusIOS` returns `{ state, renewalInfo? }` where `renewalInfo.willAutoRenew` is a real boolean and `autoRenewPreference` is preserved
+- Hook: register purchase error listener early and ignore `E_INIT_CONNECTION` until connected
+
 ## [2.9.0] - 2025-09-05
 
 ### Added
