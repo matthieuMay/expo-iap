@@ -8,6 +8,7 @@ import {
   isProductIOS,
   validateReceiptIOS,
   deepLinkToSubscriptionsIOS,
+  syncIOS,
 } from './modules/ios';
 import {
   isProductAndroid,
@@ -397,6 +398,38 @@ export const getAvailablePurchases = ({
       },
     }) || (() => Promise.resolve([]))
   )();
+
+/**
+ * Restore completed transactions (cross-platform behavior)
+ *
+ * - iOS: perform a lightweight sync to refresh transactions and ignore sync errors,
+ *   then fetch available purchases to surface restored items to the app.
+ * - Android: simply fetch available purchases (restoration happens via query).
+ *
+ * This helper returns the restored/available purchases so callers can update UI/state.
+ *
+ * @param options.alsoPublishToEventListenerIOS - iOS only: whether to also publish to the event listener
+ * @param options.onlyIncludeActiveItemsIOS - iOS only: whether to only include active items
+ * @returns Promise resolving to the list of available/restored purchases
+ */
+export const restorePurchases = async (options: {
+  alsoPublishToEventListenerIOS?: boolean;
+  onlyIncludeActiveItemsIOS?: boolean;
+} = {}): Promise<Purchase[]> => {
+  if (Platform.OS === 'ios') {
+    // Perform best-effort sync on iOS and ignore sync errors to avoid blocking restore flow
+    await syncIOS().catch(() => undefined);
+  }
+
+  // Then, fetch available purchases for both platforms
+  const purchases = await getAvailablePurchases({
+    alsoPublishToEventListenerIOS:
+      options.alsoPublishToEventListenerIOS ?? false,
+    onlyIncludeActiveItemsIOS: options.onlyIncludeActiveItemsIOS ?? true,
+  });
+
+  return purchases;
+};
 
 const offerToRecordIOS = (
   offer: PaymentDiscount | undefined,

@@ -18,9 +18,9 @@ import {
   getActiveSubscriptions,
   hasActiveSubscriptions,
   type ActiveSubscription,
+  restorePurchases,
 } from '.';
 import {
-  syncIOS,
   getPromotedProductIOS,
   requestPurchaseOnPromotedProductIOS,
 } from './modules/ios';
@@ -366,22 +366,20 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     [getAvailablePurchasesInternal, getSubscriptionsInternal],
   );
 
-  const restorePurchases = useCallback(async (): Promise<void> => {
+  // Restore completed transactions with cross-platform behavior.
+  // iOS: best-effort sync (ignore sync errors) then fetch available purchases.
+  // Android: fetch available purchases directly.
+  const restorePurchasesInternal = useCallback(async (): Promise<void> => {
     try {
-      if (Platform.OS === 'ios') {
-        await syncIOS().catch((error) => {
-          if (optionsRef.current?.onSyncError) {
-            optionsRef.current.onSyncError(error);
-          } else {
-            console.warn('Error restoring purchases:', error);
-          }
-        });
-      }
-      await getAvailablePurchasesInternal();
+      const purchases = await restorePurchases({
+        alsoPublishToEventListenerIOS: false,
+        onlyIncludeActiveItemsIOS: true,
+      });
+      setAvailablePurchases(purchases);
     } catch (error) {
       console.warn('Failed to restore purchases:', error);
     }
-  }, [getAvailablePurchasesInternal]);
+  }, []);
 
   const validateReceipt = useCallback(
     async (
@@ -423,7 +421,10 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     // Register purchase error listener EARLY. Ignore init-related errors until connected.
     subscriptionsRef.current.purchaseError = purchaseErrorListener(
       (error: PurchaseError) => {
-        if (!connectedRef.current && error.code === ErrorCode.E_INIT_CONNECTION) {
+        if (
+          !connectedRef.current &&
+          error.code === ErrorCode.E_INIT_CONNECTION
+        ) {
           return; // Ignore initialization error before connected
         }
         const friendly = getUserFriendlyErrorMessage(error);
@@ -511,7 +512,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     requestProducts: requestProductsInternal,
     requestPurchase: requestPurchaseWithReset,
     validateReceipt,
-    restorePurchases,
+    restorePurchases: restorePurchasesInternal,
     getProducts: getProductsInternal,
     getSubscriptions: getSubscriptionsInternal,
     getPromotedProductIOS,
