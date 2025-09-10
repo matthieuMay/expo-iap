@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2.9.7] - 2025-09-12
+
+### Changed
+
+- Android: remove `ensureConnection` wrapper in favor of `BillingClient` auto-reconnect and a simpler `getBillingClientOrReject` precheck
+- Android: also verify `BillingClient.isReady` before proceeding to avoid sporadic failures
+- Android: drop deprecated product fields from mapping (`displayName`, `name`, `oneTimePurchaseOfferDetails`, `subscriptionOfferDetails`) in favor of `...Android` suffixed fields
+- iOS: add `ensureConnection()` guard to all public async APIs; fix main-actor state updates and minor warnings
+
+### Fixed
+
+- Android: fix stray brace that prematurely closed `ModuleDefinition` and ktlint trailing spaces
+
 ## [2.9.6] - 2025-09-11
 
 ### Fixed
