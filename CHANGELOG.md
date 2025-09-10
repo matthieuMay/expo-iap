@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [2.9.5] - 2025-09-10
+
+### Changed
+
+- iOS: Podspec pins `openiap` to `1.1.9` to prevent CocoaPods from resolving unintended versions and to stabilize builds.
+
+### Deprecated
+
+- Deprecated `2.9.0`–`2.9.4` due to unpinned iOS dependency behavior in the wild. Please upgrade to `2.9.5`.
+
+### Notes
+
+- If you encounter CocoaPods CDN issues, try `pod install --repo-update`. The config plugin already hardens Podfile sources, but network flakiness can still require a repo update.
+
 ## [2.9.3] - 2025-09-10
 
 ### Fixed
