@@ -22,6 +22,8 @@ struct OpenIapEvent {
 @available(iOS 15.0, tvOS 15.0, *)
 @MainActor
 public class ExpoIapModule: Module {
+    // Connection state for local validation parity with RN module
+    private var isInitialized: Bool = false
     // Subscriptions for OpenIapModule event listeners
     private var purchaseUpdatedSub: Subscription?
     private var purchaseErrorSub: Subscription?
@@ -65,6 +67,8 @@ public class ExpoIapModule: Module {
         AsyncFunction("initConnection") { () async throws -> Bool in
             logDebug("initConnection called")
             let isConnected = try await OpenIapModule.shared.initConnection()
+            // Track initialization locally for ensureConnection()
+            await MainActor.run { self.isInitialized = isConnected }
             logDebug("Connection initialized: \(isConnected)")
             return isConnected
         }
@@ -74,12 +78,14 @@ public class ExpoIapModule: Module {
             let _ = try await OpenIapModule.shared.endConnection()
             
             logDebug("Connection ended")
+            await MainActor.run { self.isInitialized = false }
             return true
         }
         
         // MARK: - Product Management
         
         AsyncFunction("fetchProducts") { (params: [String: Any]) async throws -> [[String: Any?]] in
+            try await ensureConnection()
             logDebug("fetchProducts raw params: \(params)")
             
             // Handle both object format {skus: [...], type: "..."} and array format
@@ -148,6 +154,7 @@ public class ExpoIapModule: Module {
             guard let sku = params["sku"] as? String, !sku.isEmpty else {
                 throw OpenIapError.make(code: OpenIapError.E_PURCHASE_ERROR, message: "Missing required 'sku'")
             }
+            try await ensureConnection()
 
             // Optional fields
             let andFinish = (params["andDangerouslyFinishTransactionAutomatically"] as? Bool) ?? false
@@ -205,6 +212,7 @@ public class ExpoIapModule: Module {
         }
         
         AsyncFunction("finishTransaction") { (transactionId: String) async throws -> Bool in
+            try await ensureConnection()
             logDebug("finishTransaction called with id: \(transactionId)")
             let result = try await OpenIapModule.shared.finishTransaction(transactionIdentifier: transactionId)
             return result
@@ -213,6 +221,7 @@ public class ExpoIapModule: Module {
         // MARK: - Purchase History
         
         AsyncFunction("getAvailablePurchases") { (options: [String: Any?]?) async throws -> [[String: Any?]] in
+            try await ensureConnection()
             logDebug("getAvailablePurchases called")
             
             // Build options and get purchases directly from OpenIapModule
@@ -228,6 +237,7 @@ public class ExpoIapModule: Module {
         
         // Legacy function for backward compatibility
         AsyncFunction("getAvailableItems") { (alsoPublishToEventListener: Bool, onlyIncludeActiveItems: Bool) async throws -> [[String: Any?]] in
+            try await ensureConnection()
             logDebug("getAvailableItems called (legacy)")
             
             let purchaseOptions = OpenIapGetAvailablePurchasesProps(
@@ -239,6 +249,7 @@ public class ExpoIapModule: Module {
         }
         
         AsyncFunction("getPendingTransactionsIOS") { () async throws -> [[String: Any?]] in
+            try await ensureConnection()
             logDebug("getPendingTransactionsIOS called")
             
             let pendingTransactions = try await OpenIapModule.shared.getPendingTransactionsIOS()
@@ -246,6 +257,7 @@ public class ExpoIapModule: Module {
         }
         
         AsyncFunction("clearTransactionIOS") { () async throws -> Bool in
+            try await ensureConnection()
             logDebug("clearTransactionIOS called")
             try await OpenIapModule.shared.clearTransactionIOS()
             return true
@@ -254,17 +266,20 @@ public class ExpoIapModule: Module {
         // MARK: - Receipt & Validation
         
         AsyncFunction("getReceiptIOS") { () async throws -> String in
+            try await ensureConnection()
             logDebug("getReceiptIOS called")
             return try await OpenIapModule.shared.getReceiptDataIOS() ?? ""
         }
         
         AsyncFunction("requestReceiptRefreshIOS") { () async throws -> String in
+            try await ensureConnection()
             logDebug("requestReceiptRefreshIOS called")
             // Receipt refresh is handled automatically by StoreKit 2
             return try await OpenIapModule.shared.getReceiptDataIOS() ?? ""
         }
         
         AsyncFunction("validateReceiptIOS") { (sku: String) async throws -> [String: Any?] in
+            try await ensureConnection()
             logDebug("validateReceiptIOS called for sku: \(sku)")
             do {
                 // Use OpenIapReceiptValidationProps to keep naming parity with OpenIAP
@@ -286,12 +301,14 @@ public class ExpoIapModule: Module {
         // MARK: - iOS Specific Features
         
         AsyncFunction("presentCodeRedemptionSheetIOS") { () async throws -> Bool in
+            try await ensureConnection()
             logDebug("presentCodeRedemptionSheetIOS called")
             let _ = try await OpenIapModule.shared.presentCodeRedemptionSheetIOS()
             return true
         }
         
         AsyncFunction("showManageSubscriptionsIOS") { () async throws -> Bool in
+            try await ensureConnection()
             logDebug("showManageSubscriptionsIOS called")
             let _ = try await OpenIapModule.shared.showManageSubscriptionsIOS()
             return true
@@ -310,11 +327,13 @@ public class ExpoIapModule: Module {
         }
         
         AsyncFunction("beginRefundRequestIOS") { (sku: String) async throws -> String? in
+            try await ensureConnection()
             logDebug("beginRefundRequestIOS called for sku: \(sku)")
             return try await OpenIapModule.shared.beginRefundRequestIOS(sku: sku)
         }
         
         AsyncFunction("getPromotedProductIOS") { () async throws -> [String: Any?]? in
+            try await ensureConnection()
             logDebug("getPromotedProductIOS called")
             
             if let promoted = try await OpenIapModule.shared.getPromotedProductIOS() {
@@ -327,11 +346,13 @@ public class ExpoIapModule: Module {
             return nil
         }
         AsyncFunction("getStorefrontIOS") { () async throws -> String in
+            try await ensureConnection()
             logDebug("getStorefrontIOS called")
             return try await OpenIapModule.shared.getStorefrontIOS()
         }
         
         AsyncFunction("syncIOS") { () async throws -> Bool in
+            try await ensureConnection()
             logDebug("syncIOS called")
             return try await OpenIapModule.shared.syncIOS()
         }
@@ -339,21 +360,25 @@ public class ExpoIapModule: Module {
         // MARK: - Additional iOS Methods
         
         AsyncFunction("isTransactionVerifiedIOS") { (sku: String) async throws -> Bool in
+            try await ensureConnection()
             logDebug("isTransactionVerifiedIOS called for sku: \(sku)")
             return await OpenIapModule.shared.isTransactionVerifiedIOS(sku: sku)
         }
         
         AsyncFunction("getTransactionJwsIOS") { (sku: String) async throws -> String? in
+            try await ensureConnection()
             logDebug("getTransactionJwsIOS called for sku: \(sku)")
             return try await OpenIapModule.shared.getTransactionJwsIOS(sku: sku)
         }
         
         AsyncFunction("isEligibleForIntroOfferIOS") { (groupID: String) async throws -> Bool in
+            try await ensureConnection()
             logDebug("isEligibleForIntroOfferIOS called for groupID: \(groupID)")
             return await OpenIapModule.shared.isEligibleForIntroOfferIOS(groupID: groupID)
         }
         
         AsyncFunction("subscriptionStatusIOS") { (sku: String) async throws -> [[String: Any?]]? in
+            try await ensureConnection()
             logDebug("subscriptionStatusIOS called for sku: \(sku)")
             
             if let statuses = try await OpenIapModule.shared.subscriptionStatusIOS(sku: sku) {
@@ -365,27 +390,9 @@ public class ExpoIapModule: Module {
                     ]
 
                     if let info = status.renewalInfo {
-                        // Convert autoRenewStatus to a proper boolean for willAutoRenew
-                        let willAutoRenew: Bool = {
-                            // Try boolean first
-                            if let b = info.autoRenewStatus as? Bool { return b }
-                            // Fallback to string normalization
-                            let normalized = String(describing: info.autoRenewStatus).lowercased()
-                            let truthy = Set([
-                                "willrenew",
-                                "will_autorenew",
-                                "will-auto-renew",
-                                "auto_renew_on",
-                                "true",
-                                "1",
-                                "on",
-                                "yes",
-                            ])
-                            return truthy.contains(normalized)
-                        }()
-
+                        // autoRenewStatus is a Bool from OpenIAP types
                         let renewalInfo: [String: Any?] = [
-                            "willAutoRenew": willAutoRenew,
+                            "willAutoRenew": info.autoRenewStatus,
                             "autoRenewPreference": info.autoRenewPreference
                         ]
                         dict["renewalInfo"] = renewalInfo
@@ -398,6 +405,7 @@ public class ExpoIapModule: Module {
         }
         
         AsyncFunction("currentEntitlementIOS") { (sku: String) async throws -> [String: Any?]? in
+            try await ensureConnection()
             logDebug("currentEntitlementIOS called for sku: \(sku)")
             do {
                 if let entitlement = try await OpenIapModule.shared.currentEntitlementIOS(sku: sku) {
@@ -410,6 +418,7 @@ public class ExpoIapModule: Module {
         }
         
         AsyncFunction("latestTransactionIOS") { (sku: String) async throws -> [String: Any?]? in
+            try await ensureConnection()
             logDebug("latestTransactionIOS called for sku: \(sku)")
             do {
                 if let transaction = try await OpenIapModule.shared.latestTransactionIOS(sku: sku) {
@@ -468,4 +477,15 @@ public class ExpoIapModule: Module {
         _ = try? await OpenIapModule.shared.endConnection()
     }
     
+    // MARK: - Private Helper Methods
+    
+    private func ensureConnection() throws {
+        guard isInitialized else {
+            throw OpenIapError.make(
+                code: OpenIapError.E_INIT_CONNECTION,
+                message: "Connection not initialized. Call initConnection() first."
+            )
+        }
+    }
+
 }
