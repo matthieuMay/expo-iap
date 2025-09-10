@@ -19,7 +19,7 @@ import {
   hasActiveSubscriptions,
   type ActiveSubscription,
   restorePurchases,
-} from '.';
+} from './index';
 import {
   getPromotedProductIOS,
   requestPurchaseOnPromotedProductIOS,

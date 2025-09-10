@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [2.9.6] - 2025-09-11
+
+### Fixed
+
+- Metro bundling error when importing the hook: fix "Unable to resolve '../../..' from node_modules/expo-iap/build/useIAP.js" by changing an ambiguous `import '.'` to an explicit `import './index'` inside `useIAP`. This prevents Metro from walking up to the app root and trying to resolve `expo-router/entry`.
+
+### Notes
+
+- No runtime behavior changes; this is a bundling path fix only.
+- If you cannot upgrade immediately, temporary workaround: patch `node_modules/expo-iap/build/useIAP.js` to replace `from '.'` with `from './index'`, then clear cache (`npx expo start -c`).
+
 ## [2.9.5] - 2025-09-10
 
 ### Changed
