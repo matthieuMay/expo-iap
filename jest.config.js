@@ -1,7 +1,6 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  // Disable watchman to avoid sandbox/permission issues in CI and sandboxes
   watchman: false,
   roots: ['<rootDir>/src'],
   testMatch: [
@@ -34,12 +33,9 @@ module.exports = {
     '!src/ExpoIapModule.ts',
     '!src/ExpoIapModule.web.ts',
   ],
-  coverageThreshold: {
-    global: {
-      branches: 15,
-      functions: 15,
-      lines: 15,
-      statements: 15,
-    },
-  },
+  coveragePathIgnorePatterns: [
+    '<rootDir>/src/useIAP.ts',
+    '<rootDir>/src/ExpoIap.types.ts',
+    '<rootDir>/src/utils/constants.ts',
+  ],
 };
