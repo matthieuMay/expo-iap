@@ -38,18 +38,28 @@ export const deepLinkToSubscriptionsAndroid = async ({
   sku,
   packageName,
 }: {
-  sku: string;
-  packageName: string;
+  sku?: string;
+  packageName?: string;
 }): Promise<void> => {
+  // Prefer native deep link implementation via OpenIAP module
+  if (ExpoIapModule?.deepLinkToSubscriptionsAndroid) {
+    return (ExpoIapModule as any).deepLinkToSubscriptionsAndroid({
+      skuAndroid: sku,
+      packageNameAndroid: packageName,
+    });
+  }
+
+  // Fallback to Linking if native method unavailable
   if (!packageName) {
     throw new Error(
       'packageName is required for deepLinkToSubscriptionsAndroid',
     );
   }
-
-  return Linking.openURL(
-    `https://play.google.com/store/account/subscriptions?package=${packageName}&sku=${sku}`,
-  );
+  const base = `https://play.google.com/store/account/subscriptions?package=${encodeURIComponent(
+    packageName,
+  )}`;
+  const url = sku ? `${base}&sku=${encodeURIComponent(sku)}` : base;
+  return Linking.openURL(url);
 };
 
 /**

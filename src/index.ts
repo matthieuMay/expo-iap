@@ -390,11 +390,20 @@ export const getAvailablePurchases = ({
           onlyIncludeActiveItemsIOS ?? onlyIncludeActiveItems,
         ),
       android: async () => {
-        const products = await ExpoIapModule.getAvailableItemsByType('inapp');
-        const subscriptions = await ExpoIapModule.getAvailableItemsByType(
-          'subs',
-        );
-        return products.concat(subscriptions);
+        // Android now exposes unified getAvailableItems like iOS
+        if (typeof (ExpoIapModule as any).getAvailableItems === 'function') {
+          return (ExpoIapModule as any).getAvailableItems();
+        }
+        // Back-compat: try per-type if provided by native
+        const perType = (ExpoIapModule as any).getAvailableItemsByType;
+        if (typeof perType === 'function') {
+          const [inapp, subs] = await Promise.all([
+            perType('inapp').catch(() => []),
+            perType('subs').catch(() => []),
+          ]);
+          return [...inapp, ...subs];
+        }
+        return [];
       },
     }) || (() => Promise.resolve([]))
   )();
@@ -412,10 +421,12 @@ export const getAvailablePurchases = ({
  * @param options.onlyIncludeActiveItemsIOS - iOS only: whether to only include active items
  * @returns Promise resolving to the list of available/restored purchases
  */
-export const restorePurchases = async (options: {
-  alsoPublishToEventListenerIOS?: boolean;
-  onlyIncludeActiveItemsIOS?: boolean;
-} = {}): Promise<Purchase[]> => {
+export const restorePurchases = async (
+  options: {
+    alsoPublishToEventListenerIOS?: boolean;
+    onlyIncludeActiveItemsIOS?: boolean;
+  } = {},
+): Promise<Purchase[]> => {
   if (Platform.OS === 'ios') {
     // Perform best-effort sync on iOS and ignore sync errors to avoid blocking restore flow
     await syncIOS().catch(() => undefined);
@@ -674,7 +685,7 @@ export const finishTransaction = ({
         }
 
         if (isConsumable) {
-          return ExpoIapModule.consumeProductAndroid(token);
+          return ExpoIapModule.consumePurchaseAndroid(token);
         }
 
         return ExpoIapModule.acknowledgePurchaseAndroid(token);
@@ -706,12 +717,20 @@ export const getStorefrontIOS = (): Promise<string> => {
 };
 
 /**
- * @deprecated Use `getStorefrontIOS` instead. This function will be removed in version 3.0.0.
+ * Gets the storefront country code from the underlying native store.
+ * Returns a two-letter country code such as 'US', 'KR', or empty string on failure.
+ *
+ * @platform ios
+ * @platform android
  */
 export const getStorefront = (): Promise<string> => {
-  console.warn(
-    '`getStorefront` is deprecated. Use `getStorefrontIOS` instead. This function will be removed in version 3.0.0.',
-  );
+  // Cross-platform storefront
+  if (Platform.OS === 'android') {
+    if (typeof (ExpoIapModule as any).getStorefrontAndroid === 'function') {
+      return (ExpoIapModule as any).getStorefrontAndroid();
+    }
+    return Promise.resolve('');
+  }
   return getStorefrontIOS();
 };
 
@@ -784,23 +803,9 @@ export const deepLinkToSubscriptions = (options: {
   }
 
   if (Platform.OS === 'android') {
-    if (!options.skuAndroid) {
-      return Promise.reject(
-        new Error(
-          'skuAndroid is required to locate subscription in Android Store',
-        ),
-      );
-    }
-    if (!options.packageNameAndroid) {
-      return Promise.reject(
-        new Error(
-          'packageNameAndroid is required to identify your app in Android Store',
-        ),
-      );
-    }
     return deepLinkToSubscriptionsAndroid({
-      sku: options.skuAndroid,
-      packageName: options.packageNameAndroid,
+      sku: options?.skuAndroid,
+      packageName: options?.packageNameAndroid,
     });
   }
 
