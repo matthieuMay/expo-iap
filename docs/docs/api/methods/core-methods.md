@@ -12,55 +12,24 @@ import AdFitTopFixed from "@site/src/uis/AdFitTopFixed";
 
 This section covers the core methods available in expo-iap for managing in-app purchases.
 
-## 🚨 Important Platform Differences
+Note: expo-iap aligns with the OpenIAP API surface. For canonical cross-SDK API docs, see:
+- https://www.openiap.dev/docs/apis
 
-> **Critical for Cross-Platform Development:** iOS and Android have fundamental differences in their purchase APIs.
+ 
 
-### Key Differences
+## Unified APIs
 
-- **iOS**: Can only purchase **one product at a time** (single SKU)
-- **Android**: Can purchase **multiple products at once** (array of SKUs)
+These cross‑platform methods work on both iOS and Android. For StoreKit/Play‑specific helpers, see the Platform‑specific APIs section below.
 
-This difference exists because:
-
-- iOS App Store processes purchases individually
-- Google Play Store supports batch purchases
-
-| Method | iOS | Android | Cross-Platform Solution |
-| --- | --- | --- | --- |
-| `requestPurchase()` | Uses `sku: string` | Uses `skus: string[]` | Platform-specific handling required |
-| ~~`requestSubscription()`~~ | **Deprecated** | **Deprecated** | Use `requestPurchase()` with `type: 'subs'` |
-
-**💡 Best Practice:** Use the new platform-specific API (v2.7.0+) to avoid platform checks:
-
-```tsx
-// New API - no Platform.OS checks needed!
-await requestPurchase({
-  request: {
-    ios: {sku: productId},
-    android: {skus: [productId]},
-  },
-  type: 'inapp',
-});
-```
-
-Or if you need to use the legacy API:
-
-```tsx
-import {Platform} from 'react-native';
-
-if (Platform.OS === 'ios') {
-  await requestPurchase({
-    request: {sku: productId},
-  });
-} else if (Platform.OS === 'android') {
-  await requestPurchase({
-    request: {skus: [productId]},
-  });
-}
-```
-
-**🎯 Recommended Approach:** For the best developer experience, use the [`useIAP` hook](/docs/api/use-iap) which handles platform differences automatically and provides a cleaner callback-based API.
+- `initConnection()` — Initialize the store connection
+- `endConnection()` — End the store connection and cleanup
+- `fetchProducts()` — Fetch product and subscription metadata
+- `requestPurchase()` — Start a purchase for products or subscriptions
+- `finishTransaction()` — Complete a transaction after validation
+- `getAvailablePurchases()` — Restore non‑consumables and subscriptions
+- `deepLinkToSubscriptions()` — Open native subscription management UI
+- `getStorefront()` — Get current storefront country code
+- `hasActiveSubscriptions()` — Check if user has active subscriptions
 
 ## initConnection()
 
@@ -104,79 +73,9 @@ const cleanup = async () => {
 
 **Note:** When using the `useIAP` hook, connection cleanup is automatic.
 
-## getStorefront()
+ 
 
-Gets the current storefront (country code) for the user's App Store account (iOS only).
-
-```tsx
-import {getStorefront} from 'expo-iap';
-
-const fetchStorefront = async () => {
-  try {
-    const countryCode = await getStorefront();
-    console.log('User storefront:', countryCode); // e.g., 'US', 'GB', 'JP'
-    return countryCode;
-  } catch (error) {
-    console.error('Failed to get storefront:', error);
-  }
-};
-```
-
-**Returns:** `Promise<string | null>` - Returns the ISO country code of the user's App Store account, or null if unavailable.
-
-**Platform:** iOS only
-
-**Note:** This is useful for region-specific pricing, content, or features.
-
-## getAppTransactionIOS()
-
-Gets app transaction information for iOS apps (iOS 16.0+). AppTransaction represents the initial purchase that unlocked the app, useful for premium apps or apps that were previously paid.
-
-> **⚠️ Important Requirements:**
->
-> - **Runtime:** iOS 16.0 or later
-> - **Build Environment:** Xcode 15.0+ with iOS 16.0 SDK
-> - If built with older SDK versions, the method will throw an error
-
-```tsx
-import {getAppTransactionIOS} from 'expo-iap';
-
-const fetchAppTransaction = async () => {
-  try {
-    const appTransaction = await getAppTransactionIOS();
-    if (appTransaction) {
-      console.log('App Transaction ID:', appTransaction.appTransactionID);
-      console.log(
-        'Original Purchase Date:',
-        new Date(appTransaction.originalPurchaseDate),
-      );
-      console.log('Device Verification:', appTransaction.deviceVerification);
-    } else {
-      console.log('No app transaction found (app may be free)');
-    }
-  } catch (error) {
-    console.error('Failed to get app transaction:', error);
-  }
-};
-```
-
-**Returns:** `Promise<AppTransactionIOS | null>` - Returns the app transaction information or null if not available.
-
-**Platform:** iOS 16.0+ only
-
-**AppTransactionIOS Interface:**
-
-```typescript
-interface AppTransactionIOS {
-  appTransactionID: string;
-  originalAppAccountToken?: string;
-  originalPurchaseDate: number; // milliseconds since epoch
-  deviceVerification: string;
-  deviceVerificationNonce: string;
-}
-```
-
-**Note:** This is useful for verifying that a user legitimately purchased your app. The device verification data can be sent to your server for validation.
+ 
 
 ## fetchProducts()
 
@@ -224,91 +123,9 @@ const loadSubscriptions = async () => {
 
 **Returns:** `Promise<Product[]>`
 
-[**Product Interface**](../types.md#Product)
+[**Product Interface**](../types.md#product)
 
-## requestProducts() - Deprecated
-
-> **⚠️ DEPRECATED:** This method is deprecated. Use `fetchProducts({ skus, type })` instead. This method will be removed in version 3.0.0.
->
-> The 'request' prefix should only be used for event-based operations that trigger purchase flows. Since this function simply fetches product information, it has been renamed to `fetchProducts` to follow OpenIAP terminology guidelines.
-
-Fetches product or subscription information from the store.
-
-```tsx
-// Old way (deprecated)
-import {requestProducts} from 'expo-iap';
-const products = await requestProducts({
-  skus: ['com.example.product1'],
-  type: 'inapp',
-});
-
-// New way (recommended)
-import {fetchProducts} from 'expo-iap';
-const products = await fetchProducts({
-  skus: ['com.example.product1'],
-  type: 'inapp',
-});
-```
-
-**Parameters:**
-
-- `params` (object):
-  - `skus` (string[]): Array of product or subscription IDs to fetch
-  - `type` ('inapp' | 'subs'): Product type - 'inapp' for products, 'subs' for subscriptions
-
-**Returns:** `Promise<Product[]>`
-
-[**Product Interface**](../types.md#Product)
-
-## getProducts() - Deprecated
-
-> **⚠️ DEPRECATED:** This method is deprecated. Use `fetchProducts({ skus, type: 'inapp' })` instead.
-
-Fetches product information from the store.
-
-```tsx
-// Old way (deprecated)
-import {getProducts} from 'expo-iap';
-const products = await getProducts(['com.example.product1']);
-
-// New way (recommended)
-import {fetchProducts} from 'expo-iap';
-const products = await fetchProducts({
-  skus: ['com.example.product1'],
-  type: 'inapp',
-});
-```
-
-**Parameters:**
-
-- `skus` (string[]): Array of product IDs to fetch
-
-**Returns:** `Promise<Product[]>`
-
-## getSubscriptions() - Deprecated
-
-> **⚠️ DEPRECATED:** This method is deprecated. Use `fetchProducts({ skus, type: 'subs' })` instead.
-
-Fetches subscription product information from the store.
-
-```tsx
-// Old way (deprecated)
-import {getSubscriptions} from 'expo-iap';
-const subs = await getSubscriptions(['com.example.premium_monthly']);
-
-// New way (recommended)
-import {fetchProducts} from 'expo-iap';
-const subs = await fetchProducts({
-  skus: ['com.example.premium_monthly'],
-  type: 'subs',
-});
-```
-
-**Parameters:**
-
-- `skus` (string[]): Array of subscription IDs to fetch
-
-**Returns:** `Promise<SubscriptionProduct[]>`
+ 
 
 ## requestPurchase()
 
@@ -318,8 +135,10 @@ Initiates a purchase request for products or subscriptions.
 >
 > - **iOS**: Can only purchase one product at a time (uses `sku: string`)
 > - **Android**: Can purchase multiple products at once (uses `skus: string[]`)
+>
+> This exists because the iOS App Store processes purchases individually, while Google Play supports batch purchases.
 
-### New Platform-Specific API (v2.7.0+) - Recommended
+### Recommended usage (no Platform checks)
 
 ```tsx
 import {requestPurchase} from 'expo-iap';
@@ -370,36 +189,7 @@ const buySubscription = async (subscriptionId: string, subscription?: any) => {
 };
 ```
 
-### Legacy Platform-Specific Usage
-
-```tsx
-import {requestPurchase, Platform} from 'expo-iap';
-
-const buyProduct = async (productId: string) => {
-  try {
-    if (Platform.OS === 'ios') {
-      // iOS: single product purchase
-      await requestPurchase({
-        request: {
-          sku: productId,
-        },
-        type: 'inapp',
-      });
-    } else if (Platform.OS === 'android') {
-      // Android: array of products (even for single purchase)
-      await requestPurchase({
-        request: {
-          skus: [productId],
-        },
-        type: 'inapp',
-      });
-    }
-    // Purchase result will be delivered via purchase listeners
-  } catch (error) {
-    console.error('Purchase request failed:', error);
-  }
-};
-```
+ 
 
 ### Detailed Platform Examples
 
@@ -447,118 +237,14 @@ await requestPurchase({
 
 **Note:** The actual purchase result is delivered through purchase listeners or the `useIAP` hook callbacks, not as a return value.
 
-## requestSubscription() - Deprecated
+#### Important Subscription Properties
 
-> **⚠️ DEPRECATED:** This method is deprecated and will be removed in version 3.0.0. Use `requestPurchase()` with `type: 'subs'` instead.
+For subscription status checks after a purchase or when listing entitlements:
 
-### Migration Guide
+- iOS: Check `expirationDateIOS` to determine if the subscription is still active
+- Android: Check `autoRenewingAndroid` to see if auto‑renewal has been canceled
 
-**Old way (deprecated):**
-
-```tsx
-await requestSubscription({
-  sku: subscriptionId,
-  skus: [subscriptionId],
-  subscriptionOffers: [{sku: subscriptionId, offerToken: 'token'}],
-});
-```
-
-**New way (recommended):**
-
-```tsx
-await requestPurchase({
-  request: {
-    ios: {sku: subscriptionId},
-    android: {
-      skus: [subscriptionId],
-      subscriptionOffers: [{sku: subscriptionId, offerToken: 'token'}],
-    },
-  },
-  type: 'subs',
-});
-```
-
-### Legacy Usage (Not Recommended)
-
-```tsx
-import {requestPurchase, Platform} from 'expo-iap';
-
-const buySubscription = async (subscriptionId: string, subscription?: any) => {
-  try {
-    if (Platform.OS === 'ios') {
-      // iOS: single subscription purchase
-      await requestPurchase({
-        request: {
-          sku: subscriptionId,
-        },
-        type: 'subs',
-      });
-    } else if (Platform.OS === 'android') {
-      // Android: handle subscription offers
-      const subscriptionOffers = subscription?.subscriptionOfferDetails?.map(
-        (offer: any) => ({
-          sku: subscriptionId,
-          offerToken: offer.offerToken,
-        }),
-      ) || [{sku: subscriptionId, offerToken: ''}];
-
-      await requestPurchase({
-        request: {
-          skus: [subscriptionId],
-          subscriptionOffers,
-        },
-        type: 'subs',
-      });
-    }
-    // Purchase result will be delivered via purchase listeners
-  } catch (error) {
-    console.error('Subscription request failed:', error);
-  }
-};
-```
-
-### Legacy API (Deprecated)
-
-```tsx
-import {requestSubscription} from 'expo-iap';
-
-const buySubscription = async (subscriptionId: string) => {
-  try {
-    await requestSubscription({
-      request: {
-        sku: subscriptionId,
-        skus: [subscriptionId],
-        subscriptionOffers: [
-          {
-            sku: subscriptionId,
-            offerToken: 'offer_token_from_product',
-          },
-        ],
-      },
-    });
-  } catch (error) {
-    console.error('Subscription request failed:', error);
-  }
-};
-```
-
-**Parameters:**
-
-- `params` (object):
-  - `request` (object): Subscription request configuration
-    - **iOS**: `sku` (string) - Subscription ID to purchase
-    - **Android**: `skus` (string[]) - Array of subscription IDs to purchase
-    - **Android**: `subscriptionOffers` (array) - Android subscription offers (required, can be empty)
-    - **Cross-platform**: Include both `sku` and `skus` for compatibility
-    - `appAccountToken?` (string, iOS only): User identifier
-    - `obfuscatedAccountIdAndroid?` (string, Android only): Obfuscated account ID
-    - `obfuscatedProfileIdAndroid?` (string, Android only): Obfuscated profile ID
-    - `purchaseTokenAndroid?` (string, Android only): Token for subscription replacement
-    - `replacementModeAndroid?` (number, Android only): Replacement mode for subscription updates
-
-**Returns:** `Promise<Purchase | Purchase[] | null | void>`
-
-> **🚨 Important:** `requestSubscription()` is deprecated and will be removed in v3.0.0. Always use `requestPurchase()` with `type: 'subs'` for subscriptions.
+ 
 
 ## finishTransaction()
 
@@ -624,11 +310,15 @@ const restorePurchases = async () => {
 };
 ```
 
+**Parameters:**
+
+- `options?` (iOS only):
+  - `alsoPublishToEventListenerIOS?`: boolean
+  - `onlyIncludeActiveItemsIOS?`: boolean
+
 **Returns:** `Promise<Purchase[]>`
 
-## getPurchaseHistories()
-
-Removed in v2.9.0. Use `getAvailablePurchases()` instead.
+ 
 
 ## deepLinkToSubscriptions()
 
@@ -767,62 +457,335 @@ const checkIfUserHasSubscription = async () => {
 
 ```tsx
 interface Purchase {
+  id: string; // Transaction identifier
   productId: string;
-  transactionId: string;
   transactionDate: number;
   transactionReceipt: string;
-  purchaseToken?: string;
+  purchaseToken?: string; // Unified token (iOS JWS or Android token)
 
   // iOS-specific properties
-  originalTransactionDateIos?: number;
-  originalTransactionIdentifierIos?: string;
-  expirationDateIos?: number; // Subscription expiration date (milliseconds)
-  environmentIos?: 'Production' | 'Sandbox';
+  originalTransactionDateIOS?: number;
+  originalTransactionIdentifierIOS?: string;
+  expirationDateIOS?: number;
+  environmentIOS?: 'Production' | 'Sandbox';
 
   // Android-specific properties
   dataAndroid?: string;
   signatureAndroid?: string;
-  purchaseStateAndroid?: number; // 0 = purchased, 1 = canceled
+  purchaseStateAndroid?: number;
   isAcknowledgedAndroid?: boolean;
   packageNameAndroid?: string;
   developerPayloadAndroid?: string;
   obfuscatedAccountIdAndroid?: string;
   obfuscatedProfileIdAndroid?: string;
-  autoRenewingAndroid?: boolean; // Subscription auto-renewal status
-  purchaseTokenAndroid?: string;
+  autoRenewingAndroid?: boolean;
 }
 ```
 
-### Important Subscription Properties
+## Platform-specific APIs
 
-For subscription status checking:
+### iOS Specific
 
-- **iOS**: Check `expirationDateIos` to determine if the subscription is still active
-- **Android**: Check `autoRenewingAndroid` to see if the user has canceled auto-renewal
+The following iOS‑only helpers expose StoreKit and App Store specific capabilities. Most day‑to‑day flows are covered by the cross‑platform Core Methods above; use these only when you need iOS features.
 
-## Error Handling
 
-All methods can throw errors that should be handled appropriately:
+### clearTransactionIOS()
+
+Clears all pending transactions from the iOS payment queue. Useful if your app previously crashed or missed finishing transactions.
+
+```ts
+import {clearTransactionIOS, getPendingTransactionsIOS} from 'expo-iap';
+
+// Inspect then clear
+const pending = await getPendingTransactionsIOS();
+if (pending.length) {
+  await clearTransactionIOS();
+}
+```
+
+Returns: `Promise<void>`
+
+### getStorefrontIOS()
+
+Returns the current App Store storefront country code (for example, "US", "GB").
+
+```ts
+import {getStorefrontIOS} from 'expo-iap';
+
+const storefront = await getStorefrontIOS();
+```
+
+Returns: `Promise<string>`
+
+### getPromotedProductIOS()
+
+Gets the currently promoted product, if any. Requires iOS 11+.
+
+```ts
+import {getPromotedProductIOS} from 'expo-iap';
+
+const promoted = await getPromotedProductIOS();
+if (promoted) {
+  // Show your purchase UI for the promoted product
+}
+```
+
+Returns: `Promise<Product | null>`
+
+### requestPurchaseOnPromotedProductIOS()
+
+Initiates the purchase flow for the currently promoted product. Requires iOS 11+.
+
+```ts
+import {requestPurchaseOnPromotedProductIOS} from 'expo-iap';
+
+await requestPurchaseOnPromotedProductIOS();
+// Purchase result is delivered via purchase listeners/useIAP callbacks
+```
+
+Returns: `Promise<void>`
+
+### getPendingTransactionsIOS()
+
+Returns all transactions that are pending completion in the StoreKit payment queue.
+
+```ts
+import {getPendingTransactionsIOS} from 'expo-iap';
+
+const pending = await getPendingTransactionsIOS();
+```
+
+Returns: `Promise<Purchase[]>`
+
+### isEligibleForIntroOfferIOS()
+
+Checks if the user is eligible for an introductory offer for a subscription group. Requires iOS 12.2+.
+
+```ts
+import {isEligibleForIntroOfferIOS, fetchProducts} from 'expo-iap';
+
+// Example: derive group ID from a fetched subscription product
+const [sub] = await fetchProducts({ skus: ['your_sub_sku'], type: 'subs' });
+const groupId = sub?.subscriptionInfoIOS?.subscriptionGroupId ?? '';
+const eligible = groupId ? await isEligibleForIntroOfferIOS(groupId) : false;
+```
+
+Returns: `Promise<boolean>`
+
+### subscriptionStatusIOS()
+
+Returns detailed subscription status information using StoreKit 2. Requires iOS 15+.
+
+```ts
+import {subscriptionStatusIOS} from 'expo-iap';
+
+const statuses = await subscriptionStatusIOS('your_sub_sku');
+```
+
+Returns: `Promise<SubscriptionStatusIOS[]>`
+
+### currentEntitlementIOS()
+
+Returns the current entitlement for a given SKU using StoreKit 2. Requires iOS 15+.
+
+```ts
+import {currentEntitlementIOS} from 'expo-iap';
+
+const entitlement = await currentEntitlementIOS('your_sub_or_product_sku');
+```
+
+Returns: `Promise<Purchase | null>`
+
+### latestTransactionIOS()
+
+Returns the most recent transaction for a given SKU using StoreKit 2. Requires iOS 15+.
+
+```ts
+import {latestTransactionIOS} from 'expo-iap';
+
+const last = await latestTransactionIOS('your_sku');
+```
+
+Returns: `Promise<Purchase | null>`
+
+### showManageSubscriptionsIOS()
+
+Opens the native subscription management interface and returns purchases for subscriptions whose auto‑renewal status changed while the sheet was open. Requires iOS 15+.
+
+```ts
+import {showManageSubscriptionsIOS} from 'expo-iap';
+
+const changed = await showManageSubscriptionsIOS();
+if (changed.length > 0) {
+  // Update your UI / server using returned purchases
+}
+```
+
+Returns: `Promise<Purchase[]>`
+
+### beginRefundRequestIOS()
+
+Presents the refund request sheet for a specific SKU. Requires iOS 15+.
+
+```ts
+import {beginRefundRequestIOS} from 'expo-iap';
+
+const status = await beginRefundRequestIOS('your_sku');
+// status: 'success' | 'userCancelled'
+```
+
+Returns: `Promise<'success' | 'userCancelled'>`
+
+### isTransactionVerifiedIOS()
+
+Verifies the latest transaction for a given SKU using StoreKit 2. Requires iOS 15+.
+
+```ts
+import {isTransactionVerifiedIOS} from 'expo-iap';
+
+const ok = await isTransactionVerifiedIOS('your_sku');
+```
+
+Returns: `Promise<boolean>`
+
+### getTransactionJwsIOS()
+
+Returns the JSON Web Signature (JWS) for a transaction derived from a given SKU. Use this for server‑side validation. Requires iOS 15+.
+
+```ts
+import {getTransactionJwsIOS} from 'expo-iap';
+
+const jws = await getTransactionJwsIOS('your_sku');
+```
+
+Returns: `Promise<string>`
+
+### getReceiptDataIOS()
+
+Returns the base64‑encoded receipt data for server validation.
+
+```ts
+import {getReceiptDataIOS} from 'expo-iap';
+
+const receipt = await getReceiptDataIOS();
+```
+
+Returns: `Promise<string>`
+
+### syncIOS()
+
+Forces a sync with StoreKit to ensure all transactions are up to date. Requires iOS 15+.
+
+```ts
+import {syncIOS} from 'expo-iap';
+
+await syncIOS();
+```
+
+Returns: `Promise<void>`
+
+### presentCodeRedemptionSheetIOS()
+
+Presents the system sheet for redeeming App Store promo/offer codes.
+
+```ts
+import {presentCodeRedemptionSheetIOS} from 'expo-iap';
+
+await presentCodeRedemptionSheetIOS();
+```
+
+Returns: `Promise<boolean>`
+
+### getAppTransactionIOS()
+
+Gets app transaction information for iOS apps (iOS 16.0+). AppTransaction represents the initial purchase that unlocked the app, useful for premium apps or apps that were previously paid.
+
+> Runtime: iOS 16.0+; Build: Xcode 15.0+ with iOS 16.0 SDK. Older SDKs will throw.
 
 ```tsx
-import {PurchaseError} from 'expo-iap';
+import {getAppTransactionIOS} from 'expo-iap';
 
-try {
-  await requestPurchase({request: {sku: 'product_id'}});
-} catch (error) {
-  if (error instanceof PurchaseError) {
-    switch (error.code) {
-      case 'E_USER_CANCELLED':
-        console.log('User cancelled purchase');
-        break;
-      case 'E_NETWORK_ERROR':
-        console.log('Network error, please try again');
-        break;
-      default:
-        console.error('Purchase failed:', error.message);
+const fetchAppTransaction = async () => {
+  try {
+    const appTransaction = await getAppTransactionIOS();
+    if (appTransaction) {
+      console.log('App Transaction ID:', appTransaction.appTransactionId);
+      console.log('Original Purchase Date:', new Date(appTransaction.originalPurchaseDate));
+      console.log('Device Verification:', appTransaction.deviceVerification);
     }
+  } catch (error) {
+    console.error('Failed to get app transaction:', error);
+  }
+};
+```
+
+**Returns:** `Promise<AppTransactionIOS | null>`
+
+```ts
+interface AppTransactionIOS {
+  appTransactionId?: string; // iOS 18.4+
+  originalPlatform?: string; // iOS 18.4+
+  bundleId: string;
+  appVersion: string;
+  originalAppVersion: string;
+  originalPurchaseDate: number; // ms since epoch
+  deviceVerification: string;
+  deviceVerificationNonce: string;
+  environment: string;
+  signedDate: number;
+  appId?: number;
+  appVersionId?: number;
+  preorderDate?: number;
+}
+```
+
+### Android Specific
+
+#### acknowledgePurchaseAndroid
+
+Acknowledge a non‑consumable purchase or subscription on Android.
+
+```ts
+import {acknowledgePurchaseAndroid} from 'expo-iap';
+
+await acknowledgePurchaseAndroid({ token: purchase.purchaseToken! });
+```
+
+Notes:
+- finishTransaction() calls this automatically when `isConsumable` is false. You typically do not need to call it directly.
+
+#### consumePurchaseAndroid
+
+Consume a purchase (consumables only). This marks an item as consumed so it can be purchased again.
+
+Notes:
+- finishTransaction() calls Android consumption automatically when `isConsumable` is true.
+- A direct JS helper is not exposed; consumption is handled internally via the native module.
+
+#### flushFailedPurchasesCachedAsPendingAndroid (Removed)
+
+This legacy helper from older libraries has been removed. The modern flow is:
+
+```ts
+// On app startup (Android)
+const purchases = await getAvailablePurchases();
+
+for (const p of purchases) {
+  if (/* consumable */) {
+    // finishTransaction will consume on Android when isConsumable is true
+    await finishTransaction({ purchase: p, isConsumable: true });
+  } else {
+    // finishTransaction will acknowledge on Android when isConsumable is false
+    await finishTransaction({ purchase: p, isConsumable: false });
   }
 }
 ```
 
-For a complete list of error codes, see the [Error Codes](../error-codes) documentation.
+This ensures pending transactions are surfaced and properly resolved without a separate “flush” API.
+
+## Removed APIs
+
+- `requestProducts()` — Removed in v3.0.0. Use `fetchProducts({ skus, type })` instead.
+- `getProducts()` — Removed in v3.0.0. Use `fetchProducts({ skus, type: 'inapp' })` instead.
+- `getSubscriptions()` — Removed in v3.0.0. Use `fetchProducts({ skus, type: 'subs' })` instead.
+- `requestSubscription()` — Removed in v3.0.0. Use `requestPurchase({ ..., type: 'subs' })` and supply Android `subscriptionOffers`.

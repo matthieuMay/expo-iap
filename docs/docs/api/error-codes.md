@@ -420,7 +420,7 @@ const {requestPurchase} = useIAP({
 
 ## See Also
 
-- [Error Handling Guide](../guides/error-handling)
+- [Error Handling Guide](../api/error-handling)
 - [useIAP Hook](./use-iap)
 - [Types Reference](./types)
 - [Troubleshooting](../guides/troubleshooting)

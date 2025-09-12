@@ -18,7 +18,7 @@ We welcome contributions and are here to help you succeed with expo-iap!
 
 - Check our comprehensive [documentation](/)
 - Review the [FAQ](./faq) for common questions
-- Browse [examples](../examples/basic-store) for implementation patterns
+- Browse [examples](../examples/purchase-flow) for implementation patterns
 
 ### Community Support
 

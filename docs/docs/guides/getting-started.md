@@ -117,7 +117,7 @@ export default function App() {
     connected,
     products,
     purchaseHistory,
-    requestProducts,
+    fetchProducts,
     requestPurchase,
     finishTransaction,
   } = useIAP();
@@ -147,9 +147,9 @@ const productIds = [
 
 useEffect(() => {
   if (connected) {
-    requestProducts({skus: productIds, type: 'inapp'});
+    fetchProducts({ skus: productIds, type: 'inapp' });
   }
-}, [connected, requestProducts]);
+}, [connected, fetchProducts]);
 ```
 
 ### 3. Request a purchase
@@ -247,7 +247,7 @@ useEffect(() => {
 
 ## Next Steps
 
-- Review our [Complete Store Implementation](../examples/complete-impl) for a full, production-ready example
+- Review the [Available Purchases Example](../examples/available-purchases) to see restoration flow
 - Learn about the [purchase lifecycle](./lifecycle) and proper state management
 - Check out [common troubleshooting tips](./troubleshooting) and solutions
 - Explore the [API reference](../api/) for detailed method documentation

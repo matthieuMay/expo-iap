@@ -23,7 +23,7 @@ import {useIAP} from 'expo-iap';
 The `useIAP` hook follows React Hooks conventions and differs from calling functions directly from `expo-iap` (index exports):
 
 - **Automatic connection**: Automatically calls `initConnection` on mount and `endConnection` on unmount.
-- **Void-returning methods**: Methods like `fetchProducts`, `requestProducts`, `getProducts`, `getSubscriptions`, `requestPurchase`, `getAvailablePurchases`, etc. return `Promise<void>` in the hook. They do not resolve to data. Instead, they update internal state exposed by the hook: `products`, `subscriptions`, `availablePurchases`, `currentPurchase`, etc.
+- **Void-returning methods**: Methods like `fetchProducts`, `requestPurchase`, `getAvailablePurchases`, etc. return `Promise<void>` in the hook. They do not resolve to data. Instead, they update internal state exposed by the hook: `products`, `subscriptions`, `availablePurchases`, `currentPurchase`, etc.
 - **Don’t await for data**: When using the hook, do not write `const x = await fetchProducts(...)`. Call the method, then read the corresponding state from the hook.
 - **Prefer callbacks over `currentPurchase`**: `currentPurchase` was historically useful for debugging and migration, but for new code you should rely on `onPurchaseSuccess` and `onPurchaseError` options passed to `useIAP`.
 
@@ -38,9 +38,6 @@ const {
   currentPurchase, // Debugging/migration friendly; prefer callbacks
   currentPurchaseError, // Debugging/migration friendly; prefer callbacks
   fetchProducts,
-  requestProducts, // deprecated alias to fetchProducts inside the hook
-  getProducts, // deprecated helper; keep for migration
-  getSubscriptions, // deprecated helper; keep for migration
   requestPurchase,
   validateReceipt,
 } = useIAP({
@@ -137,7 +134,7 @@ interface UseIAPOptions {
   ```tsx
   if (connected) {
     // Safe to make IAP calls
-    getProducts(['product.id']);
+    fetchProducts({ skus: ['product.id'], type: 'inapp' });
   }
   ```
 
@@ -220,18 +217,18 @@ interface UseIAPOptions {
 
 ### Methods
 
-#### fetchProducts / requestProducts (hook)
+#### fetchProducts
 
 - **Type**: `(params: { skus: string[]; type?: 'inapp' | 'subs' }) => Promise<void>`
-- **Description**: Fetch products or subscriptions and update `products` / `subscriptions` state. In the hook these functions return `void` (no data result), by design.
-- **Do not await for data**: Call them, then consume `products` / `subscriptions` state from the hook.
+- **Description**: Fetch products or subscriptions and update `products` / `subscriptions` state. In the hook this returns `void` (no data result), by design.
+- **Do not await for data**: Call it, then consume `products` / `subscriptions` state from the hook.
 - **Example**:
 
   ```tsx
   useEffect(() => {
     if (!connected) return;
     // In hook: returns void, updates state
-    fetchProducts({
+  fetchProducts({
       skus: ['com.app.premium', 'com.app.coins_100'],
       type: 'inapp',
     });
@@ -243,35 +240,9 @@ interface UseIAPOptions {
   subscriptions.forEach((s) => console.log('sub', s.id));
   ```
 
-#### getProducts (Deprecated helper)
+ 
 
-> ⚠️ Deprecated. Inside the hook, prefer `fetchProducts({ skus, type: 'inapp' })`.
-
-- **Type**: `(productIds: string[]) => Promise<void>`
-- **Migration**:
-
-  ```tsx
-  // Old way (deprecated helper)
-  getProducts(['product1', 'product2']); // updates `products` state
-
-  // Preferred
-  fetchProducts({skus: ['product1', 'product2'], type: 'inapp'}); // updates `products` state
-  ```
-
-#### getSubscriptions (Deprecated helper)
-
-> ⚠️ Deprecated. Inside the hook, prefer `fetchProducts({ skus, type: 'subs' })`.
-
-- **Type**: `(subscriptionIds: string[]) => Promise<void>`
-- **Migration**:
-
-  ```tsx
-  // Old way (deprecated helper)
-  getSubscriptions(['sub1', 'sub2']); // updates `subscriptions` state
-
-  // Preferred
-  fetchProducts({skus: ['sub1', 'sub2'], type: 'subs'}); // updates `subscriptions` state
-  ```
+ 
 
 #### requestPurchase
 
@@ -638,5 +609,5 @@ const PromotedProductExample = () => {
 
 - [Error Codes Reference](./error-codes)
 - [Types Reference](./types)
-- [Error Handling Guide](../guides/error-handling)
+- [Error Handling Guide](../api/error-handling)
 - [Purchase Flow Guide](../guides/lifecycle)

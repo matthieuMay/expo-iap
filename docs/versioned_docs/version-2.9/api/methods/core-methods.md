@@ -224,7 +224,7 @@ const loadSubscriptions = async () => {
 
 **Returns:** `Promise<Product[]>`
 
-[**Product Interface**](../types.md#Product)
+[**Product Interface**](../types.md#product)
 
 ## requestProducts() - Deprecated
 
@@ -258,7 +258,7 @@ const products = await fetchProducts({
 
 **Returns:** `Promise<Product[]>`
 
-[**Product Interface**](../types.md#Product)
+[**Product Interface**](../types.md#product)
 
 ## getProducts() - Deprecated
 

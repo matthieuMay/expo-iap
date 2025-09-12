@@ -36,7 +36,7 @@ function App() {
   const {
     connected,
     products,
-    requestProducts,
+    fetchProducts,
     requestPurchase,
     validateReceipt,
   } = useIAP({
@@ -53,7 +53,7 @@ function App() {
 
   React.useEffect(() => {
     if (connected) {
-      requestProducts({skus: productIds, type: 'inapp'});
+      fetchProducts({skus: productIds, type: 'inapp'});
     }
   }, [connected]);
 

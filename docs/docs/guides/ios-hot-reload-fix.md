@@ -14,7 +14,7 @@ During hot reload, concurrent IAP operations would fail:
 ```typescript
 // Would fail on iOS during hot reload
 await Promise.all([
-  requestProducts({skus: productIds}),
+  fetchProducts({skus: productIds, type: 'inapp'}),
   getAvailablePurchases(), // Returns empty or fails
 ]);
 ```
@@ -31,14 +31,14 @@ The iOS native module now:
 
 - All iOS IAP methods now handle hot reload correctly
 - No code changes needed - works automatically
-- Affects: `requestProducts()`, `getAvailablePurchases()`, `getPurchaseHistories()`, and all other StoreKit methods
+- Affects: `fetchProducts()`, `getAvailablePurchases()`, and other StoreKit methods
 
 ## Usage
 
 ```typescript
 // Now works correctly during hot reload
 const [products, purchases] = await Promise.all([
-  requestProducts({skus: productIds}),
+  fetchProducts({skus: productIds, type: 'inapp'}),
   getAvailablePurchases(),
 ]);
 ```

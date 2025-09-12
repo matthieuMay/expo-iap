@@ -62,3 +62,91 @@ migration:
   label: Migration
   permalink: /migration
   description: Migration guides and updates
+
+breaking-change:
+  label: Breaking Change
+  permalink: /breaking-change
+  description: Breaking changes requiring code updates
+
+refactoring:
+  label: Refactoring
+  permalink: /refactoring
+  description: Codebase refactors and cleanups
+
+deprecation:
+  label: Deprecation
+  permalink: /deprecation
+  description: Deprecated APIs and migration paths
+
+terminology:
+  label: Terminology
+  permalink: /terminology
+  description: Naming and terminology updates
+
+openiap:
+  label: OpenIAP
+  permalink: /openiap
+  description: OpenIAP related notes
+
+errors:
+  label: Errors
+  permalink: /errors
+  description: Error handling and diagnostics
+
+docs:
+  label: Docs
+  permalink: /docs
+  description: Documentation updates
+
+performance:
+  label: Performance
+  permalink: /performance
+  description: Performance improvements
+
+subscriptions:
+  label: Subscriptions
+  permalink: /subscriptions
+  description: Subscription features and guides
+
+types:
+  label: Types
+  permalink: /types
+  description: Type system and API types
+
+cocoaPods:
+  label: CocoaPods
+  permalink: /cocoapods
+  description: CocoaPods integration and fixes
+
+stability:
+  label: Stability
+  permalink: /stability
+  description: Stability and reliability improvements
+
+metro:
+  label: Metro
+  permalink: /metro
+  description: Metro bundler notes
+
+bundling:
+  label: Bundling
+  permalink: /bundling
+  description: Bundling and build pipeline
+
+billing:
+  label: Billing
+  permalink: /billing
+  description: Billing related updates
+
+kotlin:
+  label: Kotlin
+  permalink: /kotlin
+  description: Kotlin and Android tooling
+architecture:
+  label: Architecture
+  permalink: /architecture
+  description: Architecture notes and updates
+bugfix:
+  label: Bugfix
+  permalink: /bugfix
+  description: Bug fixes

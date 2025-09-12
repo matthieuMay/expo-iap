@@ -360,10 +360,10 @@ export default function AvailablePurchases() {
                     </Text>
                   </View>
                 )}
-                {purchase.transactionId && (
+                {purchase.id && (
                   <View style={styles.purchaseRow}>
                     <Text style={styles.label}>Transaction ID:</Text>
-                    <Text style={styles.value}>{purchase.transactionId}</Text>
+                    <Text style={styles.value}>{purchase.id}</Text>
                   </View>
                 )}
 

@@ -86,7 +86,7 @@ Yes, you need to:
 
 ## Products and Purchases
 
-### Why does `requestProducts()` return an empty array?
+### Why does `fetchProducts()` return an empty array?
 
 Common causes:
 
@@ -101,7 +101,7 @@ const {connected, requestProducts} = useIAP();
 
 useEffect(() => {
   if (connected) {
-    requestProducts({skus: ['com.yourapp.product1'], type: 'inapp'});
+    fetchProducts({skus: ['com.yourapp.product1'], type: 'inapp'});
   }
 }, [connected]);
 ```
@@ -123,7 +123,7 @@ useEffect(() => {
 - The app was installed via `expo run:ios --device` on a real device OR via TestFlight
 - Your bundle ID matches exactly (including case sensitivity) between your app and App Store Connect
 - Product IDs are correct and match exactly in code
-- You called `initConnection()` before `requestProducts()`
+- You called `initConnection()` before `fetchProducts()`
 
 **Android:**
 
@@ -140,9 +140,9 @@ Sometimes, even if everything seems correct, App Store Connect simply doesn't re
 
 ❌ **Delete and recreate your app + in-app purchase product from scratch.**
 
-### Can I purchase products without calling `requestProducts()` first?
+### Can I purchase products without calling `fetchProducts()` first?
 
-No, you should always call `requestProducts()` first. This ensures:
+No, you should always call `fetchProducts()` first. This ensures:
 
 - Products are available and properly configured
 - You have the latest pricing and product information
@@ -335,7 +335,7 @@ When using the `useIAP` hook:
 // No manual caching needed - just fetch when connected
 useEffect(() => {
   if (connected) {
-    requestProducts({skus: productIds, type: 'inapp'});
+    fetchProducts({skus: productIds, type: 'inapp'});
   }
 }, [connected]);
 

@@ -270,8 +270,8 @@ Expo IAP is built with a modern architecture that emphasizes:
 ### 🔧 Implementation
 
 - [**API Reference**](./api/use-iap): Complete useIAP hook documentation
-- [**Basic Store Example**](./examples/basic-store): Simple product store implementation
-- [**Complete Store Example**](./examples/complete-impl): Production-ready store with validation
+- [**Purchase Flow Example**](./examples/purchase-flow): Simple product purchase flow
+- [**Available Purchases Example**](./examples/available-purchases): Restore and list prior purchases
 
 ### 📚 Guides
 
@@ -286,7 +286,7 @@ Expo IAP is built with a modern architecture that emphasizes:
 
 - [**Receipt Validation**](./guides/purchases): Secure purchase validation
 - [**Error Handling**](./api/error-codes): Comprehensive error management
-- [**Subscription Management**](./examples/subscription-manager): Handle recurring subscriptions
+- [**Subscriptions Flow Example**](./examples/subscription-flow): Handle recurring subscriptions
 - [**Troubleshooting**](./guides/troubleshooting): Common issues and solutions
 
 ## 🤝 Contributing

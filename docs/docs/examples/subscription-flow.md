@@ -1,16 +1,21 @@
 ---
-title: Subscription Management
-sidebar_label: Subscriptions
+title: Subscriptions Flow Example
+sidebar_label: Subscriptions Flow
 sidebar_position: 2
 ---
 
+<!-- This document was renamed from subscription-manager.md to subscription-flow.md -->
 import AdFitTopFixed from "@site/src/uis/AdFitTopFixed";
 
-# Subscription Management Example
+# Subscriptions Flow
 
 <AdFitTopFixed />
 
-This example demonstrates how to implement subscription management with expo-iap, including subscription status checking, renewal handling, and subscription management UI.
+This example walks through a practical subscriptions flow with expo-iap. It mirrors the working sample in `example/app/subscription-flow.tsx`, including status checks, renewal handling, and subscription management UI.
+
+View the full example source:
+
+- GitHub: https://github.com/hyochan/expo-iap/blob/main/example/app/subscription-flow.tsx
 
 ## Important: Platform-Specific Subscription Properties
 
@@ -35,7 +40,11 @@ When checking subscription status, different platforms provide different propert
 
 ⚠️ **Note**: Always validate subscription status on your server for production apps. Client-side checks are useful for UI updates but should not be the sole source of truth.
 
-## Complete Subscription Manager
+## Complete Subscription Flow
+
+View the full example source:
+
+- GitHub: https://github.com/hyochan/expo-iap/blob/main/example/app/subscription-flow.tsx
 
 ```tsx
 import React, {useEffect, useState} from 'react';
@@ -108,7 +117,7 @@ export default function SubscriptionManager() {
   const loadSubscriptions = async () => {
     try {
       setLoading(true);
-      await requestProducts({skus: SUBSCRIPTION_SKUS, type: 'subs'});
+      await fetchProducts({skus: SUBSCRIPTION_SKUS, type: 'subs'});
       console.log('Subscriptions loaded');
     } catch (error) {
       console.error('Failed to load subscriptions:', error);

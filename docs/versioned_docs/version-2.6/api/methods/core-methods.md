@@ -200,7 +200,7 @@ const fetchProducts = async () => {
 
 **Returns:** `Promise<Product[]>`
 
-[**Product Interface**](../types.md#Product)
+[**Product Interface**](../types.md#product)
 
 ## getSubscriptions()
 

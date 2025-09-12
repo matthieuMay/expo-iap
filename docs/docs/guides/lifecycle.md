@@ -423,5 +423,5 @@ const purchaseProduct = async (sku) => {
 
 - Review [Purchase Implementation Guide](./purchases) for detailed code examples
 - Check out [Error Handling Guide](./troubleshooting) for debugging tips
-- Explore [Complete Store Example](../examples/complete-impl) for production-ready code
+- Explore the [Available Purchases Example](../examples/available-purchases) for a practical restore implementation
 - See [API Reference](../api/) for detailed method documentation

@@ -12,6 +12,38 @@ import AdFitTopFixed from "@site/src/uis/AdFitTopFixed";
 
 This guide helps you migrate from `react-native-iap` to `expo-iap`. While the APIs are similar, there are some key differences and improvements in `expo-iap`.
 
+## Upgrade to v3.0.0 (expo-iap)
+
+v3 unifies tokens and removes legacy helpers to simplify the surface.
+
+- Removed functions: `getProducts`, `getSubscriptions`, `requestProducts`, `requestSubscription`, `getPurchaseHistory` / `getPurchaseHistories`, and non‑suffixed iOS aliases
+- Use `fetchProducts({ skus, type })` and `requestPurchase({ request, type })`
+- `showManageSubscriptionsIOS(): Promise<Purchase[]>` now returns purchases
+- `getAvailablePurchases` options are iOS‑only: `alsoPublishToEventListenerIOS`, `onlyIncludeActiveItemsIOS`
+- Tokens: Use `purchase.purchaseToken` for both platforms
+
+Quick mappings:
+
+```ts
+// getProducts/getSubscriptions/requestProducts → fetchProducts
+await fetchProducts({ skus: ['id1', 'id2'], type: 'inapp' });
+
+// requestSubscription → requestPurchase with subs
+await requestPurchase({
+  request: {
+    ios: { sku: 'sub_monthly' },
+    android: { skus: ['sub_monthly'], subscriptionOffers: [{ sku: 'sub_monthly', offerToken: 'token' }] },
+  },
+  type: 'subs',
+});
+
+// getPurchaseHistory/Histories → getAvailablePurchases
+const purchases = await getAvailablePurchases({ onlyIncludeActiveItemsIOS: true });
+
+// Unified token
+const token = purchase.purchaseToken;
+```
+
 ## Key Differences
 
 ### Package Installation
@@ -282,11 +314,11 @@ purchaseUpdatedListener((purchase) => {
 
 **fetchProducts() Introduction**
 
-`fetchProducts()` was introduced to replace `requestProducts()` following OpenIAP terminology:
+`fetchProducts()` replaces `requestProducts()`:
 
 ```tsx
 // ❌ Old (deprecated in v2.8.7)
-const products = await requestProducts({skus: ['product1'], type: 'inapp'});
+const products = await fetchProducts({skus: ['product1'], type: 'inapp'});
 
 // ✅ New (v2.8.7+)
 const products = await fetchProducts({skus: ['product1'], type: 'inapp'});
@@ -317,7 +349,7 @@ Most method signatures remain the same, but with improved TypeScript definitions
 
 ```tsx
 // Both libraries have the same signature
-await getProducts({skus: ['product1', 'product2']});
+await fetchProducts({skus: ['product1', 'product2'], type: 'inapp'});
 await requestPurchase({request: {sku: 'product_id'}});
 await finishTransaction({purchase});
 await getPurchaseHistories(); // Note: plural form in expo-iap v2.6.0+
@@ -329,8 +361,8 @@ await getPurchaseHistories(); // Note: plural form in expo-iap v2.6.0+
 
 | Deprecated Method        | Replacement                                |
 | ------------------------ | ------------------------------------------ |
-| `getProducts(skus)`      | `requestProducts({ skus, type: 'inapp' })` |
-| `getSubscriptions(skus)` | `requestProducts({ skus, type: 'subs' })`  |
+| `getProducts(skus)`      | `fetchProducts({ skus, type: 'inapp' })` |
+| `getSubscriptions(skus)` | `fetchProducts({ skus, type: 'subs' })`  |
 
 **Migration Examples:**
 
@@ -338,21 +370,15 @@ await getPurchaseHistories(); // Note: plural form in expo-iap v2.6.0+
 // Old way (deprecated)
 import {getProducts, getSubscriptions} from 'expo-iap';
 
-const products = await getProducts(['product1', 'product2']);
-const subs = await getSubscriptions(['sub1', 'sub2']);
+const products = await fetchProducts({ skus: ['product1', 'product2'], type: 'inapp' });
+const subs = await fetchProducts({ skus: ['sub1', 'sub2'], type: 'subs' });
 
 // New way (recommended)
-import {requestProducts} from 'expo-iap';
+import {fetchProducts} from 'expo-iap';
 
-const products = await requestProducts({
-  skus: ['product1', 'product2'],
-  type: 'inapp',
-});
+const products = await fetchProducts({ skus: ['product1', 'product2'], type: 'inapp' });
 
-const subs = await requestProducts({
-  skus: ['sub1', 'sub2'],
-  type: 'subs',
-});
+const subs = await fetchProducts({ skus: ['sub1', 'sub2'], type: 'subs' });
 ```
 
 ### New Methods
@@ -392,7 +418,7 @@ export default function MigrationTest() {
     if (connected) {
       console.log('✅ Connection successful');
 
-      requestProducts({skus: ['test_product'], type: 'inapp'})
+      fetchProducts({skus: ['test_product'], type: 'inapp'})
         .then((products) => {
           console.log('✅ Products fetched:', products.length);
         })
@@ -419,7 +445,7 @@ Test the complete purchase flow:
 const testPurchaseFlow = async () => {
   try {
     // 1. Fetch products
-    const products = await requestProducts({
+    const products = await fetchProducts({
       skus: ['test_product'],
       type: 'inapp',
     });
@@ -443,7 +469,7 @@ Ensure error handling transitions properly:
 ```tsx
 const testErrorHandling = () => {
   // Test with invalid product ID
-  requestProducts({skus: ['invalid_product'], type: 'inapp'})
+  fetchProducts({skus: ['invalid_product'], type: 'inapp'})
     .then((products) => {
       if (products.length === 0) {
         console.log('✅ Empty products handled correctly');

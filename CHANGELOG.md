@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## 3.0.0 - 2025-09-13
+
+Breaking changes:
+
+- Remove legacy APIs: `getProducts`, `getSubscriptions`, `requestProducts`, `requestSubscription`, `getPurchaseHistory`/`getPurchaseHistories`, and non‑suffixed iOS aliases
+- `showManageSubscriptionsIOS()` now returns `Promise<Purchase[]>` (was `boolean`)
+- `getAvailablePurchases()` options now only accept iOS keys: `alsoPublishToEventListenerIOS`, `onlyIncludeActiveItemsIOS`
+
+Features:
+
+- Unify tokens via `purchaseToken` on `Purchase` (iOS JWS + Android token)
+- Add `getReceiptDataIOS` alias for iOS receipt parity
+
+Refactor:
+
+- Remove deprecated comments/tests/mocks; simplify subscription dedup to `id`
+- Clean up hook surface and examples to current API
+
+Fixes:
+
+- iOS parity and guards across native bridge and TS layer
+
+Docs:
+
+- Add v3 migration and update API pages to remove legacy helpers
+
+Tests:
+
+- Remove legacy specs; all root and example suites pass
+
 ## [2.9.7] - 2025-09-12
 
 ### Changed
