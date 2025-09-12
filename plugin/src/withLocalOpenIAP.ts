@@ -196,10 +196,12 @@ const withLocalOpenIAP: ConfigPlugin<{localPath?: LocalPathOption} | void> = (
     const gradle = config.modResults;
     const dependencyLine = `    implementation project(':openiap-google')`;
 
-    // Remove any previously injected external deps that can conflict with the local module
+    // Remove any previously added Maven deps for openiap-google to avoid duplicate classes
     const removalPatterns = [
-      /\n\s*implementation\s+"com\.android\.billingclient:billing-ktx:[^"]+"\s*\n/g,
-      /\n\s*implementation\s+"com\.google\.android\.gms:play-services-base:[^"]+"\s*\n/g,
+      // Groovy DSL: implementation "io.github.hyochan.openiap:openiap-google:x.y.z" or api "..."
+      /^\s*(?:implementation|api)\s+["']io\.github\.hyochan\.openiap:openiap-google:[^"']+["']\s*$/gm,
+      // Kotlin DSL: implementation("io.github.hyochan.openiap:openiap-google:x.y.z") or api("...")
+      /^\s*(?:implementation|api)\s*\(\s*["']io\.github\.hyochan\.openiap:openiap-google:[^"']+["']\s*\)\s*$/gm,
     ];
     let contents = gradle.contents;
     let removedAny = false;
@@ -211,9 +213,7 @@ const withLocalOpenIAP: ConfigPlugin<{localPath?: LocalPathOption} | void> = (
     }
     if (removedAny) {
       gradle.contents = contents;
-      console.log(
-        '🧹 Removed external Play Billing/GMS deps to use local :openiap-google',
-      );
+      console.log('🧹 Removed Maven openiap-google to use local :openiap-google');
     }
     if (!gradle.contents.includes(dependencyLine)) {
       const anchor = /dependencies\s*\{/m;
@@ -244,8 +244,10 @@ const withLocalOpenIAP: ConfigPlugin<{localPath?: LocalPathOption} | void> = (
         if (fs.existsSync(appBuildGradle)) {
           let contents = fs.readFileSync(appBuildGradle, 'utf8');
           const patterns = [
-            /\n\s*implementation\s+"com\.android\.billingclient:billing-ktx:[^"]+"\s*\n/g,
-            /\n\s*implementation\s+"com\.google\.android\.gms:play-services-base:[^"]+"\s*\n/g,
+            // Groovy DSL
+            /^\s*(?:implementation|api)\s+["']io\.github\.hyochan\.openiap:openiap-google:[^"']+["']\s*$/gm,
+            // Kotlin DSL
+            /^\s*(?:implementation|api)\s*\(\s*["']io\.github\.hyochan\.openiap:openiap-google:[^"']+["']\s*\)\s*$/gm,
           ];
           let changed = false;
           for (const p of patterns) {
@@ -257,7 +259,7 @@ const withLocalOpenIAP: ConfigPlugin<{localPath?: LocalPathOption} | void> = (
           if (changed) {
             fs.writeFileSync(appBuildGradle, contents);
             console.log(
-              '🧹 expo-iap: Cleaned app/build.gradle billing/gms deps for local :openiap-google',
+              '🧹 expo-iap: Cleaned Maven openiap-google for local :openiap-google',
             );
           }
         }

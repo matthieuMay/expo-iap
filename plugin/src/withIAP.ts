@@ -49,7 +49,7 @@ const modifyAppBuildGradle = (
 ): string => {
   let modified = gradle;
 
-  // Add OpenIAP dependency to app-level build.gradle(.kts)
+  // Ensure OpenIAP dependency exists at desired version in app-level build.gradle(.kts)
   const impl = (ga: string, v: string) =>
     language === 'kotlin'
       ? `    implementation("${ga}:${v}")`
@@ -57,21 +57,24 @@ const modifyAppBuildGradle = (
   // Pin OpenIAP Google library to 1.1.0
   const openiapDep = impl('io.github.hyochan.openiap:openiap-google', '1.1.0');
 
-  const hasGA = (ga: string) =>
-    new RegExp(String.raw`\b(?:implementation|api)\s*\(?["']${ga}:`, 'm').test(
-      modified,
-    );
-
-  let hasAddedDependency = false;
-
-  if (!hasGA('io.github.hyochan.openiap:openiap-google')) {
-    modified = addLineToGradle(modified, /dependencies\s*{/, openiapDep, 0);
-    hasAddedDependency = true;
+  // Remove any existing openiap-google lines (any version, groovy/kotlin, implementation/api)
+  const openiapAnyLine =
+    /^\s*(?:implementation|api)\s*\(?\s*["']io\.github\.hyochan\.openiap:openiap-google:[^"']+["']\s*\)?\s*$/gm;
+  const hadExisting = openiapAnyLine.test(modified);
+  if (hadExisting) {
+    modified = modified.replace(openiapAnyLine, '').replace(/\n{3,}/g, '\n\n');
   }
 
-  // Log only once and only if we actually added dependencies
-  if (hasAddedDependency)
-    logOnce('🛠️ expo-iap: Added OpenIAP dependency to build.gradle');
+  // Ensure the desired dependency line is present
+  if (!new RegExp(String.raw`io\.github\.hyochan\.openiap:openiap-google:1\.1\.0`).test(modified)) {
+    // Insert just after the opening `dependencies {` line
+    modified = addLineToGradle(modified, /dependencies\s*{/, openiapDep, 1);
+    logOnce(
+      hadExisting
+        ? '🛠️ expo-iap: Replaced OpenIAP dependency with 1.1.0'
+        : '🛠️ expo-iap: Added OpenIAP dependency (1.1.0) to build.gradle',
+    );
+  }
 
   return modified;
 };
@@ -173,12 +176,13 @@ const withIap: ConfigPlugin<ExpoIapPluginOptions | void> = (
   options,
 ) => {
   try {
-    const isLocalDev = !!(options?.enableLocalDev || options?.localPath);
+    // Respect explicit flag; fall back to presence of localPath only when flag is unset
+    const isLocalDev = options?.enableLocalDev ?? !!options?.localPath;
     // Apply Android modifications (skip adding deps when linking local module)
     let result = withIapAndroid(config, {addDeps: !isLocalDev});
 
     // iOS: choose one path to avoid overlap
-    if (options?.enableLocalDev || options?.localPath) {
+    if (isLocalDev) {
       if (!options?.localPath) {
         WarningAggregator.addWarningIOS(
           'expo-iap',
