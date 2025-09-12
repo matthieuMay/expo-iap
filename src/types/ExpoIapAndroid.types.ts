@@ -72,10 +72,6 @@ type SubscriptionOffer = {
 };
 
 export type RequestSubscriptionAndroidProps = RequestPurchaseAndroidProps & {
-  /**
-   * @deprecated Use `purchaseToken` instead. This field will be removed in a future version.
-   */
-  purchaseTokenAndroid?: string;
   replacementModeAndroid?: ReplacementModesAndroid;
   subscriptionOffers: SubscriptionOffer[];
 };
@@ -121,15 +117,10 @@ export enum PurchaseAndroidState {
 }
 
 // Legacy naming for backward compatibility
-// Removed legacy alias `PurchaseStateAndroid` in v2.9.0
 
 // Legacy naming for backward compatibility
 export type ProductPurchaseAndroid = PurchaseCommon & {
   platform: 'android';
-  /**
-   * @deprecated Use `purchaseToken` instead. This field will be removed in a future version.
-   */
-  purchaseTokenAndroid?: string;
   dataAndroid?: string;
   signatureAndroid?: string;
   autoRenewingAndroid?: boolean;
@@ -143,5 +134,3 @@ export type ProductPurchaseAndroid = PurchaseCommon & {
 
 // Preferred naming
 export type PurchaseAndroid = ProductPurchaseAndroid;
-
-// Removed legacy Android alias types in v2.9.0

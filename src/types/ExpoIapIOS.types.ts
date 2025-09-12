@@ -145,11 +145,6 @@ export type ProductPurchaseIOS = PurchaseCommon & {
   currencyCodeIOS?: string;
   currencySymbolIOS?: string;
   countryCodeIOS?: string;
-  /**
-   * @deprecated Use `purchaseToken` instead. This field will be removed in a future version.
-   * iOS 15+ JWS representation is now available through the `purchaseToken` field.
-   */
-  jwsRepresentationIOS?: string;
 };
 
 // Preferred naming

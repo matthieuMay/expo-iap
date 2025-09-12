@@ -67,24 +67,7 @@ type UseIap = {
     skus: string[];
     type?: 'inapp' | 'subs';
   }) => Promise<void>;
-  /**
-   * @deprecated Use fetchProducts({ skus, type: 'inapp' | 'subs' }) instead. This method will be removed in version 3.0.0.
-   * The 'request' prefix should only be used for event-based operations.
-   */
-  requestProducts: (params: {
-    skus: string[];
-    type?: 'inapp' | 'subs';
-  }) => Promise<void>;
-  /**
-   * @deprecated Use fetchProducts({ skus, type: 'inapp' }) instead. This method will be removed in version 3.0.0.
-   * Note: This method internally uses fetchProducts, so no deprecation warning is shown.
-   */
-  getProducts: (skus: string[]) => Promise<void>;
-  /**
-   * @deprecated Use fetchProducts({ skus, type: 'subs' }) instead. This method will be removed in version 3.0.0.
-   * Note: This method internally uses fetchProducts, so no deprecation warning is shown.
-   */
-  getSubscriptions: (skus: string[]) => Promise<void>;
+
   requestPurchase: (params: {
     request: RequestPurchaseProps | RequestSubscriptionProps;
     type?: 'inapp' | 'subs';
@@ -122,7 +105,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
   const [products, setProducts] = useState<Product[]>([]);
   const [promotedProductsIOS] = useState<Purchase[]>([]);
   const [subscriptions, setSubscriptions] = useState<SubscriptionProduct[]>([]);
-  // Removed in v2.9.0: purchaseHistories state and related API
+
   const [availablePurchases, setAvailablePurchases] = useState<Purchase[]>([]);
   const [currentPurchase, setCurrentPurchase] = useState<Purchase>();
   const [promotedProductIOS, setPromotedProductIOS] = useState<Product>();
@@ -186,24 +169,6 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     setCurrentPurchaseError(undefined);
   }, []);
 
-  const getProductsInternal = useCallback(
-    async (skus: string[]): Promise<void> => {
-      try {
-        const result = await fetchProducts({skus, type: 'inapp'});
-        setProducts((prevProducts) =>
-          mergeWithDuplicateCheck(
-            prevProducts,
-            result as Product[],
-            (product) => product.id,
-          ),
-        );
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      }
-    },
-    [mergeWithDuplicateCheck],
-  );
-
   const getSubscriptionsInternal = useCallback(
     async (skus: string[]): Promise<void> => {
       try {
@@ -254,19 +219,6 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     [mergeWithDuplicateCheck],
   );
 
-  const requestProductsInternal = useCallback(
-    async (params: {
-      skus: string[];
-      type?: 'inapp' | 'subs';
-    }): Promise<void> => {
-      console.warn(
-        "`requestProducts` is deprecated in useIAP hook. Use the new `fetchProducts` method instead. The 'request' prefix should only be used for event-based operations.",
-      );
-      return fetchProductsInternal(params);
-    },
-    [fetchProductsInternal],
-  );
-
   const getAvailablePurchasesInternal = useCallback(async (): Promise<void> => {
     try {
       const result = await getAvailablePurchases({
@@ -303,8 +255,6 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     },
     [],
   );
-
-  // NOTE: getPurchaseHistories removed in v2.9.0. Use getAvailablePurchases instead.
 
   const finishTransaction = useCallback(
     async ({
@@ -509,12 +459,10 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     clearCurrentPurchaseError,
     getAvailablePurchases: getAvailablePurchasesInternal,
     fetchProducts: fetchProductsInternal,
-    requestProducts: requestProductsInternal,
     requestPurchase: requestPurchaseWithReset,
     validateReceipt,
     restorePurchases: restorePurchasesInternal,
-    getProducts: getProductsInternal,
-    getSubscriptions: getSubscriptionsInternal,
+    // internal getters kept for hook state management
     getPromotedProductIOS,
     requestPurchaseOnPromotedProductIOS,
     getActiveSubscriptions: getActiveSubscriptionsInternal,
