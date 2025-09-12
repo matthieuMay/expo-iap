@@ -88,11 +88,13 @@ export default function PurchaseFlow() {
     },
   });
 
-  // Load products when component mounts
+  // Load products when component mounts (guard against dev double-invoke)
+  const didFetchRef = React.useRef(false);
   useEffect(() => {
     console.log('[PurchaseFlow] useEffect - connected:', connected);
     console.log('[PurchaseFlow] PRODUCT_IDS:', PRODUCT_IDS);
-    if (connected) {
+    if (connected && !didFetchRef.current) {
+      didFetchRef.current = true;
       console.log('[PurchaseFlow] Calling fetchProducts with:', PRODUCT_IDS);
       fetchProducts({skus: PRODUCT_IDS, type: 'inapp'})
         .then(() => {
@@ -101,37 +103,37 @@ export default function PurchaseFlow() {
         .catch((error) => {
           console.error('[PurchaseFlow] fetchProducts error:', error);
         });
-    } else {
+    } else if (!connected) {
+      didFetchRef.current = false; // reset when disconnected
       console.log('[PurchaseFlow] Not fetching products - not connected');
     }
   }, [connected, fetchProducts]);
 
   // Defer loading guard until after all hooks are declared
 
-  const handlePurchase = async (itemId: string) => {
-    try {
-      setIsProcessing(true);
-      setPurchaseResult('Processing purchase...');
+  const handlePurchase = (itemId: string) => {
+    setIsProcessing(true);
+    setPurchaseResult('Processing purchase...');
 
-      // New platform-specific API (v2.7.0+) - no Platform.OS branching needed
-      await requestPurchase({
-        request: {
-          ios: {
-            sku: itemId,
-            quantity: 1,
-          },
-          android: {
-            skus: [itemId],
-          },
-        },
-        type: 'inapp',
-      });
-    } catch (error) {
+    // Fire-and-forget: requestPurchase is event-based; handle results via hook callbacks
+    if (typeof requestPurchase !== 'function') {
+      console.warn('[PurchaseFlow] requestPurchase missing (test/mock env)');
       setIsProcessing(false);
-      const errorMessage =
-        error instanceof Error ? error.message : 'Purchase failed';
-      setPurchaseResult(`❌ Purchase failed: ${errorMessage}`);
+      setPurchaseResult('Cannot start purchase in test/mock environment.');
+      return;
     }
+    void requestPurchase({
+      request: {
+        ios: {
+          sku: itemId,
+          quantity: 1,
+        },
+        android: {
+          skus: [itemId],
+        },
+      },
+      type: 'inapp',
+    });
   };
 
   // Monitor products changes

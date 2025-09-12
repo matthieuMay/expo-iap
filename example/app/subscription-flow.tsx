@@ -109,9 +109,7 @@ export default function SubscriptionFlow() {
         const hasValidToken = !!(
           purchase.purchaseToken && purchase.purchaseToken.length > 0
         );
-        const hasValidTransactionId = !!(
-          purchase.transactionId && purchase.transactionId.length > 0
-        );
+        const hasValidTransactionId = !!(purchase.id && purchase.id.length > 0);
 
         isPurchased = hasValidToken || hasValidTransactionId;
 
@@ -119,8 +117,7 @@ export default function SubscriptionFlow() {
         // A restoration typically has originalTransactionIdentifierIOS different from transactionId
         isRestoration = Boolean(
           iosPurchase.originalTransactionIdentifierIOS &&
-            iosPurchase.originalTransactionIdentifierIOS !==
-              purchase.transactionId &&
+            iosPurchase.originalTransactionIdentifierIOS !== purchase.id &&
             iosPurchase.transactionReasonIOS &&
             iosPurchase.transactionReasonIOS !== 'PURCHASE',
         );
@@ -134,7 +131,7 @@ export default function SubscriptionFlow() {
           '  originalTransactionId:',
           iosPurchase.originalTransactionIdentifierIOS,
         );
-        console.log('  currentTransactionId:', purchase.transactionId);
+        console.log('  currentTransactionId:', purchase.id);
         console.log('  transactionReason:', iosPurchase.transactionReasonIOS);
       } else if (Platform.OS === 'android' && purchase.platform === 'android') {
         // For Android, consider it purchased if we received the purchase callback
@@ -303,11 +300,13 @@ export default function SubscriptionFlow() {
   // Note: Do NOT fetch on mount before connection is ready.
   // Fetching happens in the connected effect below.
 
-  // Load subscriptions and check status when connected
+  // Load subscriptions and check status when connected (guard against dev double-invoke)
+  const didFetchSubsRef = React.useRef(false);
   useEffect(() => {
     const subscriptionIds = SUBSCRIPTION_PRODUCT_IDS;
 
-    if (connected) {
+    if (connected && !didFetchSubsRef.current) {
+      didFetchSubsRef.current = true;
       console.log('Connected to store, loading subscription products...');
       // requestProducts is event-based, not promise-based
       // Results will be available through the useIAP hook's subscriptions state
@@ -319,6 +318,8 @@ export default function SubscriptionFlow() {
       getAvailablePurchases([]).catch((error) => {
         console.warn('Failed to load available purchases:', error);
       });
+    } else if (!connected) {
+      didFetchSubsRef.current = false; // reset when disconnected
     }
   }, [connected, fetchProducts, getAvailablePurchases]);
 
@@ -364,58 +365,57 @@ export default function SubscriptionFlow() {
     }
   }, [subscriptions]);
 
-  const handleSubscription = async (itemId: string) => {
-    try {
-      // Check if already subscribed to this product
-      const isAlreadySubscribed = activeSubscriptions.some(
-        (sub) => sub.productId === itemId,
+  const handleSubscription = (itemId: string) => {
+    // Check if already subscribed to this product
+    const isAlreadySubscribed = activeSubscriptions.some(
+      (sub) => sub.productId === itemId,
+    );
+
+    if (isAlreadySubscribed) {
+      Alert.alert(
+        'Already Subscribed',
+        'You already have an active subscription to this product.',
+        [{text: 'OK', style: 'default'}],
       );
-
-      if (isAlreadySubscribed) {
-        Alert.alert(
-          'Already Subscribed',
-          'You already have an active subscription to this product.',
-          [{text: 'OK', style: 'default'}],
-        );
-        return;
-      }
-
-      setIsProcessing(true);
-      setPurchaseResult('Processing subscription...');
-
-      // Find the subscription to get offer details for Android
-      const subscription = subscriptions.find((sub) => sub.id === itemId);
-
-      // New platform-specific API (v2.7.0+) - no Platform.OS branching needed
-      // requestPurchase is event-based - results come through onPurchaseSuccess/onPurchaseError
-      await requestPurchase({
-        request: {
-          ios: {
-            sku: itemId,
-            appAccountToken: 'user-123',
-          },
-          android: {
-            skus: [itemId],
-            subscriptionOffers:
-              subscription &&
-              'subscriptionOfferDetailsAndroid' in subscription &&
-              subscription.subscriptionOfferDetailsAndroid
-                ? subscription.subscriptionOfferDetailsAndroid.map((offer) => ({
-                    sku: itemId,
-                    offerToken: offer.offerToken,
-                  }))
-                : [],
-          },
-        },
-        type: 'subs',
-      });
-    } catch (error) {
-      setIsProcessing(false);
-      const errorMessage =
-        error instanceof Error ? error.message : 'Subscription failed';
-      setPurchaseResult(`❌ Subscription failed: ${errorMessage}`);
-      Alert.alert('Subscription Failed', errorMessage);
+      return;
     }
+
+    setIsProcessing(true);
+    setPurchaseResult('Processing subscription...');
+
+    // Find the subscription to get offer details for Android
+    const subscription = subscriptions.find((sub) => sub.id === itemId);
+
+    // Fire-and-forget: requestPurchase is event-based; handle results via hook callbacks
+    if (typeof requestPurchase !== 'function') {
+      console.warn(
+        '[SubscriptionFlow] requestPurchase missing (test/mock env)',
+      );
+      setIsProcessing(false);
+      setPurchaseResult('Cannot start purchase in test/mock environment.');
+      return;
+    }
+    void requestPurchase({
+      request: {
+        ios: {
+          sku: itemId,
+          // appAccountToken can be provided in real apps if needed
+        },
+        android: {
+          skus: [itemId],
+          subscriptionOffers:
+            subscription &&
+            'subscriptionOfferDetailsAndroid' in subscription &&
+            subscription.subscriptionOfferDetailsAndroid
+              ? subscription.subscriptionOfferDetailsAndroid.map((offer) => ({
+                  sku: itemId,
+                  offerToken: offer.offerToken,
+                }))
+              : [],
+        },
+      },
+      type: 'subs',
+    });
   };
 
   const retryLoadSubscriptions = () => {
