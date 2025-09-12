@@ -15,12 +15,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicBoolean
 
 class ExpoIapModule : Module() {
     companion object {
         const val TAG = "ExpoIapModule"
         private const val EVENT_PURCHASE_UPDATED = "purchase-updated"
         private const val EVENT_PURCHASE_ERROR = "purchase-error"
+        private const val MAX_BUFFERED_EVENTS = 200
     }
 
     private val job = Job()
@@ -32,6 +37,26 @@ class ExpoIapModule : Module() {
 
     private val openIap: OpenIapModule by lazy { OpenIapModule(context) }
     private var listenersAttached = false
+    private val pendingEvents = ConcurrentLinkedQueue<Pair<String, Map<String, Any?>>>()
+    private val connectionReady = AtomicBoolean(false)
+    private val connectionMutex = Mutex()
+
+    private fun emitOrQueue(
+        name: String,
+        payload: Map<String, Any?>,
+    ) {
+        if (connectionReady.get()) {
+            // Ensure event emission occurs on the main dispatcher
+            scope.launch { sendEvent(name, payload) }
+            return
+        }
+        // Bound the buffer to prevent unbounded growth if init stalls
+        if (pendingEvents.size >= MAX_BUFFERED_EVENTS) {
+            pendingEvents.poll()
+            Log.w(TAG, "pendingEvents overflow; dropping oldest")
+        }
+        pendingEvents.add(name to payload)
+    }
 
     // Mapping helpers now provided by openiap-google (toJSON helpers)
 
@@ -47,37 +72,67 @@ class ExpoIapModule : Module() {
 
             AsyncFunction("initConnection") { promise: Promise ->
                 scope.launch {
-                    try {
-                        runCatching { openIap.setActivity(currentActivity) }
-                        if (!listenersAttached) {
-                            listenersAttached = true
-                            openIap.addPurchaseUpdateListener { p ->
-                                try {
-                                    sendEvent(EVENT_PURCHASE_UPDATED, p.toJSON())
-                                } catch (ex: Exception) {
-                                    Log.e(TAG, "Failed to send PURCHASE_UPDATED event", ex)
+                    connectionMutex.withLock {
+                        try {
+                            // Activity may be unavailable in headless/background scenarios.
+                            // Attempt to set it, but do not fail init if missing.
+                            runCatching { openIap.setActivity(currentActivity) }
+                                .onFailure { Log.w(TAG, "initConnection: Activity missing; proceeding headless", it) }
+
+                            // If already connected, short-circuit
+                            if (connectionReady.get()) {
+                                promise.resolve(true)
+                                return@withLock
+                            }
+
+                            // Attach listeners early to avoid races during init
+                            if (!listenersAttached) {
+                                listenersAttached = true
+                                openIap.addPurchaseUpdateListener { p ->
+                                    runCatching { emitOrQueue(EVENT_PURCHASE_UPDATED, p.toJSON()) }
+                                        .onFailure { Log.e(TAG, "Failed to buffer/send PURCHASE_UPDATED", it) }
+                                }
+                                openIap.addPurchaseErrorListener { e ->
+                                    runCatching { emitOrQueue(EVENT_PURCHASE_ERROR, e.toJSON()) }
+                                        .onFailure { Log.e(TAG, "Failed to buffer/send PURCHASE_ERROR", it) }
                                 }
                             }
-                            openIap.addPurchaseErrorListener { e ->
-                                try {
-                                    sendEvent(EVENT_PURCHASE_ERROR, e.toJSON())
-                                } catch (ex: Exception) {
-                                    Log.e(TAG, "Failed to send PURCHASE_ERROR event", ex)
-                                }
+
+                            val ok = openIap.initConnection()
+
+                            if (!ok) {
+                                // Clear any buffered events from a failed init
+                                pendingEvents.clear()
+                                promise.reject(OpenIapError.E_INIT_CONNECTION, "Failed to initialize connection", null)
+                                return@withLock
                             }
+
+                            // Mark ready then flush any buffered events
+                            connectionReady.set(true)
+                            while (true) {
+                                val ev = pendingEvents.poll() ?: break
+                                // Already on main dispatcher here; emit directly
+                                runCatching { sendEvent(ev.first, ev.second) }
+                                    .onFailure { Log.e(TAG, "Failed to flush buffered event: ${ev.first}", it) }
+                            }
+
+                            promise.resolve(true)
+                        } catch (e: Exception) {
+                            promise.reject(OpenIapError.E_INIT_CONNECTION, e.message, e)
                         }
-                        val ok = openIap.initConnection()
-                        promise.resolve(ok)
-                    } catch (e: Exception) {
-                        promise.reject(OpenIapError.E_INIT_CONNECTION, e.message, null)
                     }
                 }
             }
 
             AsyncFunction("endConnection") { promise: Promise ->
                 scope.launch {
-                    runCatching { openIap.endConnection() }
-                    promise.resolve(true)
+                    connectionMutex.withLock {
+                        runCatching { openIap.endConnection() }
+                        // Reset connection state and clear any buffered events
+                        connectionReady.set(false)
+                        pendingEvents.clear()
+                        promise.resolve(true)
+                    }
                 }
             }
 
@@ -93,34 +148,7 @@ class ExpoIapModule : Module() {
                 }
             }
 
-            AsyncFunction("requestProducts") { type: String, skuArr: Array<String>, promise: Promise ->
-                Log.w(TAG, "WARNING: requestProducts is deprecated. Use fetchProducts instead.")
-                scope.launch {
-                    try {
-                        val reqType = ProductRequest.ProductRequestType.fromString(type)
-                        val products = openIap.fetchProducts(ProductRequest(skuArr.toList(), reqType))
-                        promise.resolve(products.map { it.toJSON() })
-                    } catch (e: Exception) {
-                        promise.reject(OpenIapError.E_QUERY_PRODUCT, e.message, null)
-                    }
-                }
-            }
-
-            // Unified available items API (align with iOS)
             AsyncFunction("getAvailableItems") { promise: Promise ->
-                scope.launch {
-                    try {
-                        val purchases = openIap.getAvailablePurchases(null)
-                        promise.resolve(purchases.map { it.toJSON() })
-                    } catch (e: Exception) {
-                        promise.reject(OpenIapError.E_SERVICE_ERROR, e.message, null)
-                    }
-                }
-            }
-
-            // Back-compat: keep old name but ignore type and warn
-            AsyncFunction("getAvailableItemsByType") { _: String, promise: Promise ->
-                Log.w(TAG, "getAvailableItemsByType is deprecated. Use getAvailableItems().")
                 scope.launch {
                     try {
                         val purchases = openIap.getAvailablePurchases(null)
@@ -151,9 +179,8 @@ class ExpoIapModule : Module() {
                     try {
                         val code = openIap.getStorefront()
                         promise.resolve(code)
-                    } catch (_: Exception) {
-                        // Follow OpenIAP behavior: resolve empty string on failure
-                        promise.resolve("")
+                    } catch (e: Exception) {
+                        promise.reject(OpenIapError.E_SERVICE_ERROR, e.message, e)
                     }
                 }
             }
@@ -173,7 +200,7 @@ class ExpoIapModule : Module() {
                 PromiseUtils.addPromiseForKey(PromiseUtils.PROMISE_BUY_ITEM, promise)
                 scope.launch {
                     try {
-                        runCatching { openIap.setActivity(currentActivity) }
+                        openIap.setActivity(currentActivity)
                         val reqType = ProductRequest.ProductRequestType.fromString(type)
                         val result =
                             openIap.requestPurchase(
@@ -187,7 +214,7 @@ class ExpoIapModule : Module() {
                             )
                         result.forEach { p ->
                             try {
-                                sendEvent(EVENT_PURCHASE_UPDATED, p.toJSON())
+                                emitOrQueue(EVENT_PURCHASE_UPDATED, p.toJSON())
                             } catch (ex: Exception) {
                                 Log.e(TAG, "Failed to send PURCHASE_UPDATED event (requestPurchase)", ex)
                             }
@@ -201,7 +228,7 @@ class ExpoIapModule : Module() {
                                 "platform" to "android",
                             )
                         try {
-                            sendEvent(EVENT_PURCHASE_ERROR, errorMap)
+                            emitOrQueue(EVENT_PURCHASE_ERROR, errorMap)
                         } catch (ex: Exception) {
                             Log.e(TAG, "Failed to send PURCHASE_ERROR event (requestPurchase)", ex)
                         }
