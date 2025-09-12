@@ -26,19 +26,24 @@ Quick mappings:
 
 ```ts
 // getProducts/getSubscriptions/requestProducts → fetchProducts
-await fetchProducts({ skus: ['id1', 'id2'], type: 'inapp' });
+await fetchProducts({skus: ['id1', 'id2'], type: 'inapp'});
 
 // requestSubscription → requestPurchase with subs
 await requestPurchase({
   request: {
-    ios: { sku: 'sub_monthly' },
-    android: { skus: ['sub_monthly'], subscriptionOffers: [{ sku: 'sub_monthly', offerToken: 'token' }] },
+    ios: {sku: 'sub_monthly'},
+    android: {
+      skus: ['sub_monthly'],
+      subscriptionOffers: [{sku: 'sub_monthly', offerToken: 'token'}],
+    },
   },
   type: 'subs',
 });
 
 // getPurchaseHistory/Histories → getAvailablePurchases
-const purchases = await getAvailablePurchases({ onlyIncludeActiveItemsIOS: true });
+const purchases = await getAvailablePurchases({
+  onlyIncludeActiveItemsIOS: true,
+});
 
 // Unified token
 const token = purchase.purchaseToken;
@@ -318,7 +323,7 @@ purchaseUpdatedListener((purchase) => {
 
 ```tsx
 // ❌ Old (deprecated in v2.8.7)
-const products = await fetchProducts({skus: ['product1'], type: 'inapp'});
+const products = await requestProducts({skus: ['product1'], type: 'inapp'});
 
 // ✅ New (v2.8.7+)
 const products = await fetchProducts({skus: ['product1'], type: 'inapp'});
@@ -359,8 +364,8 @@ await getPurchaseHistories(); // Note: plural form in expo-iap v2.6.0+
 
 > **⚠️ Important:** The following methods are deprecated and will be removed in a future version:
 
-| Deprecated Method        | Replacement                                |
-| ------------------------ | ------------------------------------------ |
+| Deprecated Method        | Replacement                              |
+| ------------------------ | ---------------------------------------- |
 | `getProducts(skus)`      | `fetchProducts({ skus, type: 'inapp' })` |
 | `getSubscriptions(skus)` | `fetchProducts({ skus, type: 'subs' })`  |
 
@@ -370,15 +375,21 @@ await getPurchaseHistories(); // Note: plural form in expo-iap v2.6.0+
 // Old way (deprecated)
 import {getProducts, getSubscriptions} from 'expo-iap';
 
-const products = await fetchProducts({ skus: ['product1', 'product2'], type: 'inapp' });
-const subs = await fetchProducts({ skus: ['sub1', 'sub2'], type: 'subs' });
+const products = await fetchProducts({
+  skus: ['product1', 'product2'],
+  type: 'inapp',
+});
+const subs = await fetchProducts({skus: ['sub1', 'sub2'], type: 'subs'});
 
 // New way (recommended)
 import {fetchProducts} from 'expo-iap';
 
-const products = await fetchProducts({ skus: ['product1', 'product2'], type: 'inapp' });
+const products = await fetchProducts({
+  skus: ['product1', 'product2'],
+  type: 'inapp',
+});
 
-const subs = await fetchProducts({ skus: ['sub1', 'sub2'], type: 'subs' });
+const subs = await fetchProducts({skus: ['sub1', 'sub2'], type: 'subs'});
 ```
 
 ### New Methods
