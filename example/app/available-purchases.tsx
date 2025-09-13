@@ -58,8 +58,8 @@ export default function AvailablePurchases() {
     finishTransaction,
   } = useIAP({
     onPurchaseSuccess: async (purchase) => {
-      // Avoid logging sensitive receipt; it's same as purchaseToken
-      const {transactionReceipt: _omit, ...safePurchase} = purchase as any;
+      // Avoid logging sensitive token in console output
+      const {purchaseToken: _omit, ...safePurchase} = purchase as any;
       console.log('[AVAILABLE-PURCHASES] Purchase successful:', safePurchase);
 
       // Finish transaction like in subscription-flow

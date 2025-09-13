@@ -43,8 +43,8 @@ export default function PurchaseFlow() {
   // Use the useIAP hook for managing purchases
   const {connected, products, fetchProducts, finishTransaction} = useIAP({
     onPurchaseSuccess: async (purchase: Purchase) => {
-      // Avoid logging sensitive receipt; it's same as purchaseToken
-      const {transactionReceipt: _omit, ...safePurchase} = purchase as any;
+      // Avoid logging sensitive token in console output
+      const {purchaseToken: _omit, ...safePurchase} = purchase as any;
       console.log('Purchase successful:', safePurchase);
       setLastPurchase(purchase);
       setIsProcessing(false);
@@ -59,8 +59,8 @@ export default function PurchaseFlow() {
 
       // IMPORTANT: Server-side receipt validation should be performed here
       // Send the receipt to your backend server for validation
-      // Example:
-      // const isValid = await validateReceiptOnServer(purchase.transactionReceipt);
+      // Example (use unified token on both platforms):
+      // const isValid = await validateReceiptOnServer(purchase.purchaseToken);
       // if (!isValid) {
       //   Alert.alert('Error', 'Receipt validation failed');
       //   return;

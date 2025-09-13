@@ -83,8 +83,8 @@ export default function SubscriptionFlow() {
     activeSubscriptions,
   } = useIAP({
     onPurchaseSuccess: async (purchase) => {
-      // Avoid logging sensitive receipt; it's same as purchaseToken
-      const {transactionReceipt: _omit, ...safePurchase} = purchase as any;
+      // Avoid logging sensitive token in console output
+      const {purchaseToken: _omit, ...safePurchase} = purchase as any;
       console.log('Subscription successful:', safePurchase);
       setLastPurchase(purchase);
 
@@ -171,8 +171,8 @@ export default function SubscriptionFlow() {
 
         // IMPORTANT: Server-side receipt validation should be performed here
         // Send the receipt to your backend server for validation
-        // Example:
-        // const isValid = await validateReceiptOnServer(purchase.transactionReceipt);
+        // Example (use unified token on both platforms):
+        // const isValid = await validateReceiptOnServer(purchase.purchaseToken);
         // if (!isValid) {
         //   Alert.alert('Error', 'Receipt validation failed');
         //   return;
@@ -220,8 +220,8 @@ export default function SubscriptionFlow() {
 
       // IMPORTANT: Server-side receipt validation should be performed here
       // Send the receipt to your backend server for validation
-      // Example:
-      // const isValid = await validateReceiptOnServer(purchase.transactionReceipt);
+      // Example (use unified token on both platforms):
+      // const isValid = await validateReceiptOnServer(purchase.purchaseToken);
       // if (!isValid) {
       //   Alert.alert('Error', 'Receipt validation failed');
       //   return;

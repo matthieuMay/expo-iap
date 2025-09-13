@@ -85,10 +85,10 @@ class App extends Component {
   }
 
   handlePurchaseUpdate = (purchase: ProductPurchase) => {
-    const receipt = purchase.transactionReceipt;
+    const receipt = purchase.purchaseToken;
     if (receipt) {
       yourAPI
-        .deliverOrDownloadFancyInAppPurchase(purchase.transactionReceipt)
+        .deliverOrDownloadFancyInAppPurchase(purchase.purchaseToken)
         .then(async (deliveryResult) => {
           if (isSuccess(deliveryResult)) {
             // Tell the store that you have delivered what has been paid for.

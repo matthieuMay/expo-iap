@@ -5,6 +5,7 @@ sidebar_position: 2
 ---
 
 <!-- This document was renamed from subscription-manager.md to subscription-flow.md -->
+
 import AdFitTopFixed from "@site/src/uis/AdFitTopFixed";
 
 # Subscriptions Flow
@@ -15,7 +16,7 @@ This example walks through a practical subscriptions flow with expo-iap. It mirr
 
 View the full example source:
 
-- GitHub: https://github.com/hyochan/expo-iap/blob/main/example/app/subscription-flow.tsx
+- GitHub: [example/app/subscription-flow.tsx](https://github.com/hyochan/expo-iap/blob/main/example/app/subscription-flow.tsx)
 
 ## Important: Platform-Specific Subscription Properties
 
@@ -44,7 +45,7 @@ When checking subscription status, different platforms provide different propert
 
 View the full example source:
 
-- GitHub: https://github.com/hyochan/expo-iap/blob/main/example/app/subscription-flow.tsx
+- GitHub: [example/app/subscription-flow.tsx](https://github.com/hyochan/expo-iap/blob/main/example/app/subscription-flow.tsx)
 
 ```tsx
 import React, {useEffect, useState} from 'react';
@@ -221,11 +222,9 @@ export default function SubscriptionManager() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            receipt: purchase.transactionReceipt,
             productId: purchase.productId,
-            // Platform-specific fields
             purchaseToken: purchase.purchaseToken, // Unified field (iOS: JWS, Android: purchaseToken)
-            transactionId: purchase.transactionId, // iOS
+            packageName: (purchase as PurchaseAndroid)?.packageNameAndroid, // Will be needed in android
           }),
         },
       );
@@ -710,7 +709,7 @@ await requestPurchase({
 
 Subscription validation requires different approaches:
 
-- **iOS**: Send `transactionReceipt` to Apple's validation servers
+- **iOS**: Send `purchaseToken` which was ~~`transactionReceipt`~~ to Apple's validation servers
 - **Android**: Send `purchaseToken` and `packageName` to Google Play validation
 
 This is handled in the `validateSubscriptionStatus` function with platform-specific logic.

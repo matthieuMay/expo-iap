@@ -147,7 +147,7 @@ const productIds = [
 
 useEffect(() => {
   if (connected) {
-    fetchProducts({ skus: productIds, type: 'inapp' });
+    fetchProducts({skus: productIds, type: 'inapp'});
   }
 }, [connected, fetchProducts]);
 ```
@@ -188,32 +188,18 @@ The `useIAP` hook automatically handles purchase updates. When a purchase is suc
 ```tsx
 useEffect(() => {
   if (currentPurchase) {
-    // Platform-specific validation
+    // Unified validation (iOS/Android)
     const validateAndFinish = async () => {
       try {
-        if (Platform.OS === 'ios') {
-          // iOS: Simple validation
-          await validateReceiptOnServer({
-            receiptData: currentPurchase.transactionReceipt,
-            productId: currentPurchase.productId,
-          });
-        } else if (Platform.OS === 'android') {
-          // Android: Check required parameters first
-          const purchaseToken = currentPurchase.purchaseToken;
-          const packageName = currentPurchase.packageNameAndroid;
+        const purchaseToken = currentPurchase.purchaseToken;
+        const productId = currentPurchase.productId;
+        const packageName = currentPurchase.packageNameAndroid; // iOS: undefined
 
-          if (!purchaseToken || !packageName) {
-            throw new Error(
-              'Android validation requires packageName and purchaseToken',
-            );
-          }
-
-          await validateReceiptOnServer({
-            packageName,
-            purchaseToken,
-            productId: currentPurchase.productId,
-          });
-        }
+        await validateReceiptOnServer({
+          productId,
+          purchaseToken,
+          ...(packageName ? {packageName} : {}),
+        });
 
         // If validation successful, finish the transaction
         await finishTransaction({purchase: currentPurchase});

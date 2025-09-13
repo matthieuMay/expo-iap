@@ -13,9 +13,8 @@ import AdFitTopFixed from "@site/src/uis/AdFitTopFixed";
 This section covers the core methods available in expo-iap for managing in-app purchases.
 
 Note: expo-iap aligns with the OpenIAP API surface. For canonical cross-SDK API docs, see:
-- https://www.openiap.dev/docs/apis
 
- 
+- [OpenIAP APIs](https://www.openiap.dev/docs/apis)
 
 ## Unified APIs
 
@@ -73,10 +72,6 @@ const cleanup = async () => {
 
 **Note:** When using the `useIAP` hook, connection cleanup is automatic.
 
- 
-
- 
-
 ## fetchProducts()
 
 Fetches product or subscription information from the store.
@@ -124,8 +119,6 @@ const loadSubscriptions = async () => {
 **Returns:** `Promise<Product[]>`
 
 [**Product Interface**](../types.md#product)
-
- 
 
 ## requestPurchase()
 
@@ -189,8 +182,6 @@ const buySubscription = async (subscriptionId: string, subscription?: any) => {
 };
 ```
 
- 
-
 ### Detailed Platform Examples
 
 #### iOS Only
@@ -243,8 +234,6 @@ For subscription status checks after a purchase or when listing entitlements:
 
 - iOS: Check `expirationDateIOS` to determine if the subscription is still active
 - Android: Check `autoRenewingAndroid` to see if auto‑renewal has been canceled
-
- 
 
 ## finishTransaction()
 
@@ -317,8 +306,6 @@ const restorePurchases = async () => {
   - `onlyIncludeActiveItemsIOS?`: boolean
 
 **Returns:** `Promise<Purchase[]>`
-
- 
 
 ## deepLinkToSubscriptions()
 
@@ -460,7 +447,6 @@ interface Purchase {
   id: string; // Transaction identifier
   productId: string;
   transactionDate: number;
-  transactionReceipt: string;
   purchaseToken?: string; // Unified token (iOS JWS or Android token)
 
   // iOS-specific properties
@@ -487,7 +473,6 @@ interface Purchase {
 ### iOS Specific
 
 The following iOS‑only helpers expose StoreKit and App Store specific capabilities. Most day‑to‑day flows are covered by the cross‑platform Core Methods above; use these only when you need iOS features.
-
 
 ### clearTransactionIOS()
 
@@ -565,7 +550,7 @@ Checks if the user is eligible for an introductory offer for a subscription grou
 import {isEligibleForIntroOfferIOS, fetchProducts} from 'expo-iap';
 
 // Example: derive group ID from a fetched subscription product
-const [sub] = await fetchProducts({ skus: ['your_sub_sku'], type: 'subs' });
+const [sub] = await fetchProducts({skus: ['your_sub_sku'], type: 'subs'});
 const groupId = sub?.subscriptionInfoIOS?.subscriptionGroupId ?? '';
 const eligible = groupId ? await isEligibleForIntroOfferIOS(groupId) : false;
 ```
@@ -710,7 +695,10 @@ const fetchAppTransaction = async () => {
     const appTransaction = await getAppTransactionIOS();
     if (appTransaction) {
       console.log('App Transaction ID:', appTransaction.appTransactionId);
-      console.log('Original Purchase Date:', new Date(appTransaction.originalPurchaseDate));
+      console.log(
+        'Original Purchase Date:',
+        new Date(appTransaction.originalPurchaseDate),
+      );
       console.log('Device Verification:', appTransaction.deviceVerification);
     }
   } catch (error) {
@@ -748,10 +736,11 @@ Acknowledge a non‑consumable purchase or subscription on Android.
 ```ts
 import {acknowledgePurchaseAndroid} from 'expo-iap';
 
-await acknowledgePurchaseAndroid({ token: purchase.purchaseToken! });
+await acknowledgePurchaseAndroid({token: purchase.purchaseToken!});
 ```
 
 Notes:
+
 - finishTransaction() calls this automatically when `isConsumable` is false. You typically do not need to call it directly.
 
 #### consumePurchaseAndroid
@@ -759,6 +748,7 @@ Notes:
 Consume a purchase (consumables only). This marks an item as consumed so it can be purchased again.
 
 Notes:
+
 - finishTransaction() calls Android consumption automatically when `isConsumable` is true.
 - A direct JS helper is not exposed; consumption is handled internally via the native module.
 

@@ -9,7 +9,6 @@ describe('Purchase Token Unified API Tests', () => {
         productId: 'test.product.1',
         transactionId: 'transaction-123',
         transactionDate: Date.now(),
-        transactionReceipt: 'receipt-data',
         purchaseToken: 'mock-jws-token',
       },
     };
@@ -42,7 +41,6 @@ describe('Purchase Token Unified API Tests', () => {
       platform: 'ios',
       productId: 'test.product.1',
       transactionDate: Date.now(),
-      transactionReceipt: 'ios-receipt',
       purchaseToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // JWS token for iOS
     };
 
@@ -51,7 +49,6 @@ describe('Purchase Token Unified API Tests', () => {
       platform: 'android',
       productId: 'test.product.1',
       transactionDate: Date.now(),
-      transactionReceipt: 'android-receipt',
       purchaseToken: 'mock-android-purchase-token', // Android purchase token
     };
 
@@ -73,7 +70,6 @@ describe('Purchase Token Unified API Tests', () => {
       platform: 'ios',
       productId: 'test.product',
       transactionDate: Date.now(),
-      transactionReceipt: 'receipt-data',
       purchaseToken: 'unified-purchase-token',
     };
 
@@ -81,7 +77,6 @@ describe('Purchase Token Unified API Tests', () => {
     expect(typeof purchase.platform).toBe('string');
     expect(typeof purchase.productId).toBe('string');
     expect(typeof purchase.transactionDate).toBe('number');
-    expect(typeof purchase.transactionReceipt).toBe('string');
     expect(typeof purchase.purchaseToken).toBe('string');
   });
 });

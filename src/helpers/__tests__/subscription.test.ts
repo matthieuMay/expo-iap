@@ -32,7 +32,6 @@ describe('Subscription Helper Functions', () => {
             transactionId: 'trans-123',
             transactionDate: currentTime,
             platform: 'ios',
-            transactionReceipt: 'receipt',
             expirationDateIOS: currentTime + 7 * oneDayMs, // Expires in 7 days
             environmentIOS: 'Production',
           } as Purchase,
@@ -61,7 +60,6 @@ describe('Subscription Helper Functions', () => {
             transactionId: 'trans-123',
             transactionDate: currentTime - 10 * oneDayMs,
             platform: 'ios',
-            transactionReceipt: 'receipt',
             expirationDateIOS: currentTime - oneDayMs, // Expired yesterday
           } as Purchase,
         ];
@@ -81,7 +79,6 @@ describe('Subscription Helper Functions', () => {
             transactionId: 'trans-123',
             transactionDate: currentTime - 12 * 60 * 60 * 1000, // 12 hours ago
             platform: 'ios',
-            transactionReceipt: 'receipt',
             environmentIOS: 'Sandbox',
           } as Purchase,
         ];
@@ -103,7 +100,6 @@ describe('Subscription Helper Functions', () => {
             transactionId: 'trans-123',
             transactionDate: currentTime,
             platform: 'ios',
-            transactionReceipt: 'receipt',
             expirationDateIOS: currentTime + 7 * oneDayMs,
           } as Purchase,
           {
@@ -112,7 +108,6 @@ describe('Subscription Helper Functions', () => {
             transactionId: 'trans-456',
             transactionDate: currentTime,
             platform: 'ios',
-            transactionReceipt: 'receipt',
             expirationDateIOS: currentTime + 7 * oneDayMs,
           } as Purchase,
         ];
@@ -133,7 +128,6 @@ describe('Subscription Helper Functions', () => {
             transactionId: 'trans-123',
             transactionDate: currentTime,
             platform: 'ios',
-            transactionReceipt: 'receipt',
             expirationDateIOS: currentTime + 5 * oneDayMs, // 5 days remaining
           } as Purchase,
         ];
@@ -154,7 +148,6 @@ describe('Subscription Helper Functions', () => {
             transactionId: 'trans-123',
             transactionDate: currentTime,
             platform: 'ios',
-            transactionReceipt: 'receipt',
             purchaseToken: 'jwt-token-example',
             expirationDateIOS: currentTime + 7 * oneDayMs,
           } as Purchase,
@@ -175,7 +168,6 @@ describe('Subscription Helper Functions', () => {
             transactionId: 'trans-123',
             transactionDate: currentTime,
             platform: 'ios',
-            transactionReceipt: 'receipt',
             expirationDateIOS: currentTime + 10 * oneDayMs, // 10 days remaining
           } as Purchase,
         ];
@@ -202,7 +194,6 @@ describe('Subscription Helper Functions', () => {
             transactionId: 'trans-123',
             transactionDate: currentTime,
             platform: 'android',
-            transactionReceipt: 'receipt',
             autoRenewingAndroid: true,
           } as Purchase,
         ];
@@ -228,7 +219,6 @@ describe('Subscription Helper Functions', () => {
             transactionId: 'trans-123',
             transactionDate: currentTime,
             platform: 'android',
-            transactionReceipt: 'receipt',
             autoRenewingAndroid: false,
           } as Purchase,
         ];
@@ -250,7 +240,6 @@ describe('Subscription Helper Functions', () => {
             transactionId: 'trans-123',
             transactionDate: currentTime,
             platform: 'android',
-            transactionReceipt: 'receipt',
             autoRenewingAndroid: true,
           } as Purchase,
           {
@@ -259,7 +248,6 @@ describe('Subscription Helper Functions', () => {
             transactionId: 'trans-456',
             transactionDate: currentTime,
             platform: 'android',
-            transactionReceipt: 'receipt',
             autoRenewingAndroid: true,
           } as Purchase,
         ];
@@ -282,7 +270,6 @@ describe('Subscription Helper Functions', () => {
             transactionId: 'trans-123',
             transactionDate: currentTime,
             platform: 'ios',
-            transactionReceipt: 'receipt',
             // No subscription-specific fields
           } as Purchase,
         ];
@@ -313,7 +300,6 @@ describe('Subscription Helper Functions', () => {
             transactionId: 'trans-123',
             transactionDate: currentTime,
             platform: 'ios',
-            transactionReceipt: 'receipt',
             expirationDateIOS: currentTime + 7 * oneDayMs,
           } as Purchase,
           {
@@ -322,7 +308,6 @@ describe('Subscription Helper Functions', () => {
             transactionId: 'trans-456',
             transactionDate: currentTime,
             platform: 'ios',
-            transactionReceipt: 'receipt',
             expirationDateIOS: currentTime + 7 * oneDayMs,
           } as Purchase,
         ];
@@ -354,7 +339,6 @@ describe('Subscription Helper Functions', () => {
           transactionId: 'trans-123',
           transactionDate: currentTime,
           platform: 'ios',
-          transactionReceipt: 'receipt',
           expirationDateIOS: currentTime + 7 * oneDayMs,
         } as Purchase,
       ];
@@ -383,7 +367,6 @@ describe('Subscription Helper Functions', () => {
           transactionId: 'trans-123',
           transactionDate: currentTime,
           platform: 'ios',
-          transactionReceipt: 'receipt',
           expirationDateIOS: currentTime + 7 * oneDayMs,
         } as Purchase,
       ];

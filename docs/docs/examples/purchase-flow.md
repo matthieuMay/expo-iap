@@ -14,7 +14,7 @@ This example walks through a clean purchase flow using expo-iap with the `useIAP
 
 View the full example source:
 
-- GitHub: https://github.com/hyochan/expo-iap/blob/main/example/app/purchase-flow.tsx
+- GitHub: [example/app/purchase-flow.tsx](https://github.com/hyochan/expo-iap/blob/main/example/app/purchase-flow.tsx)
 
 ## Flow Overview
 
@@ -36,7 +36,7 @@ View the full example source:
 
   `finishTransaction({ purchase, isConsumable })`
 
-```
+```txt
 Connect → Fetch Products → Request Purchase → Server Validate → Finish Transaction
 ```
 
@@ -77,14 +77,15 @@ Use the modern, platform‑specific request container (v2.7.0+). This avoids man
 ```tsx
 await requestPurchase({
   request: {
-    ios: { sku: productId, quantity: 1 },
-    android: { skus: [productId] },
+    ios: {sku: productId, quantity: 1},
+    android: {skus: [productId]},
   },
   type: 'inapp',
 });
 ```
 
 Notes:
+
 - Keep `andDangerouslyFinishTransactionAutomatically` off (default) to validate first.
 
 ### Key iOS Options
@@ -99,7 +100,6 @@ Purchase objects have different properties on iOS and Android. When accessing pl
 ```tsx
 // Unified fields
 const token = purchase.purchaseToken; // iOS JWS or Android token
-const receipt = purchase.transactionReceipt; // Raw receipt (iOS), useful for debugging
 
 // Android-only helpers
 // const pkg = (purchase as PurchaseAndroid).packageNameAndroid;

@@ -7,7 +7,8 @@ import AdFitTopFixed from "@site/src/uis/AdFitTopFixed";
 This page contains the TypeScript types and interfaces used throughout the expo-iap library.
 
 Note: expo-iap aligns closely with the OpenIAP type schema. For canonical definitions and cross-SDK parity, see OpenIAP Types:
-- https://www.openiap.dev/docs/types
+
+- [OpenIAP Types](https://www.openiap.dev/docs/types)
 
 ## Core Types
 
@@ -75,7 +76,6 @@ interface Purchase {
   id: string; // Transaction identifier
   productId: string;
   transactionDate: number;
-  transactionReceipt: string;
   purchaseToken?: string; // Unified token (iOS JWS or Android token)
 }
 ```
@@ -156,7 +156,7 @@ The following sections describe the complete TypeScript surface for expo‑iap. 
 ### Core
 
 ```ts
-export type ChangeEventPayload = { value: string };
+export type ChangeEventPayload = {value: string};
 
 // iOS detailed product types
 export enum ProductTypeIOS {
@@ -195,7 +195,6 @@ export type PurchaseCommon = {
   productId: string;
   ids?: string[];
   transactionDate: number;
-  transactionReceipt: string;
   purchaseToken?: string;
   platform?: string;
   quantity: number;
@@ -203,11 +202,11 @@ export type PurchaseCommon = {
   isAutoRenewing: boolean;
 };
 
-export type ProductSubscriptionCommon = ProductCommon & { type: 'subs' };
+export type ProductSubscriptionCommon = ProductCommon & {type: 'subs'};
 
 // Platform tags
-export type IosPlatform = { platform: 'ios' };
-export type AndroidPlatform = { platform: 'android' };
+export type IosPlatform = {platform: 'ios'};
+export type AndroidPlatform = {platform: 'android'};
 ```
 
 ### iOS
@@ -220,7 +219,7 @@ type SubscriptionOffer = {
   displayPrice: string;
   id: string;
   paymentMode: PaymentMode;
-  period: { unit: SubscriptionIosPeriod; value: number };
+  period: {unit: SubscriptionIosPeriod; value: number};
   periodCount: number;
   price: number;
   type: 'introductory' | 'promotional';
@@ -230,7 +229,7 @@ type SubscriptionInfo = {
   introductoryOffer?: SubscriptionOffer;
   promotionalOffers?: SubscriptionOffer[];
   subscriptionGroupId: string;
-  subscriptionPeriod: { unit: SubscriptionIosPeriod; value: number };
+  subscriptionPeriod: {unit: SubscriptionIosPeriod; value: number};
 };
 
 export type Discount = {
@@ -285,7 +284,7 @@ export type PurchaseIOS = PurchaseCommon & {
   transactionReasonIOS?: 'PURCHASE' | 'RENEWAL' | string;
   revocationDateIOS?: number;
   revocationReasonIOS?: string;
-  offerIOS?: { id: string; type: string; paymentMode: string };
+  offerIOS?: {id: string; type: string; paymentMode: string};
   currencyCodeIOS?: string;
   currencySymbolIOS?: string;
   countryCodeIOS?: string;
@@ -337,7 +336,7 @@ type PricingPhaseAndroid = {
   recurrenceMode: number;
 };
 
-type PricingPhasesAndroid = { pricingPhaseList: PricingPhaseAndroid[] };
+type PricingPhasesAndroid = {pricingPhaseList: PricingPhaseAndroid[]};
 
 type ProductSubscriptionAndroidOfferDetail = {
   basePlanId: string;
@@ -395,7 +394,7 @@ export type ProductPurchase =
   | (PurchaseIOS & IosPlatform);
 
 export type SubscriptionPurchase =
-  | (PurchaseAndroid & AndroidPlatform & { autoRenewingAndroid: boolean })
+  | (PurchaseAndroid & AndroidPlatform & {autoRenewingAndroid: boolean})
   | (PurchaseIOS & IosPlatform);
 
 export type Purchase =
@@ -430,7 +429,7 @@ export interface RequestSubscriptionAndroidProps
   extends RequestPurchaseAndroidProps {
   readonly purchaseTokenAndroid?: string;
   readonly replacementModeAndroid?: number;
-  readonly subscriptionOffers: { sku: string; offerToken: string }[];
+  readonly subscriptionOffers: {sku: string; offerToken: string}[];
 }
 
 export interface RequestPurchasePropsByPlatforms {
@@ -549,7 +548,9 @@ export interface IapContext {
     type?: 'inapp' | 'subs';
   }): Promise<Purchase | Purchase[] | void>;
 
-  finishTransaction(params: FinishTransactionParams): Promise<PurchaseResult | boolean>;
+  finishTransaction(
+    params: FinishTransactionParams,
+  ): Promise<PurchaseResult | boolean>;
 
   getAvailablePurchases(options?: PurchaseOptions): Promise<Purchase[]>;
 

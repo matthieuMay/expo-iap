@@ -401,7 +401,7 @@ import {validateReceiptIos, validateReceiptAndroid} from 'expo-iap';
 
 // Platform-specific receipt validation helpers
 const isValidIOS = await validateReceiptIos({
-  receiptBody: purchase.transactionReceipt,
+  receiptBody: purchase.purchaseToken,
   password: 'your_shared_secret',
 });
 

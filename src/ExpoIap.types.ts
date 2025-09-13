@@ -38,8 +38,7 @@ export type PurchaseCommon = {
   productId: string; // Product identifier - which product was purchased
   ids?: string[]; // Product identifiers for purchases that include multiple products
   transactionDate: number;
-  transactionReceipt: string;
-  purchaseToken?: string; // Unified purchase token (jwsRepresentation for iOS, purchaseToken for Android)
+  purchaseToken?: string; // Unified token (iOS: JWS, Android: purchaseToken)
   platform?: string;
 };
 

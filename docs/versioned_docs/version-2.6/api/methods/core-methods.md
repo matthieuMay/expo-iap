@@ -605,7 +605,6 @@ interface Purchase {
   productId: string;
   transactionId: string;
   transactionDate: number;
-  transactionReceipt: string;
   purchaseToken?: string;
 
   // iOS-specific properties
