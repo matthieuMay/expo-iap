@@ -1,8 +1,5 @@
 import {NATIVE_ERROR_CODES} from './ExpoIapModule';
-import {ErrorCode, Platform} from './types';
-
-/** Platform identifiers supported by {@link PurchaseError}. */
-export type PurchaseErrorPlatform = Platform | 'ios' | 'android';
+import {ErrorCode, IapPlatform} from './types';
 
 /** Properties used to construct a {@link PurchaseError}. */
 export interface PurchaseErrorProps {
@@ -11,7 +8,7 @@ export interface PurchaseErrorProps {
   debugMessage?: string;
   code?: ErrorCode;
   productId?: string;
-  platform?: PurchaseErrorPlatform;
+  platform?: IapPlatform;
 }
 
 /** Shape of raw platform error objects coming from native modules. */
@@ -26,10 +23,10 @@ type PlatformErrorData = {
 const toStandardizedCode = (errorCode: ErrorCode): string =>
   errorCode.startsWith('E_') ? errorCode : `E_${errorCode}`;
 
-const normalizePlatform = (
-  platform: PurchaseErrorPlatform,
-): 'ios' | 'android' =>
-  platform === Platform.Ios || platform === 'ios' ? 'ios' : 'android';
+const normalizePlatform = (platform: IapPlatform): 'ios' | 'android' =>
+  typeof platform === 'string' && platform.toLowerCase() === 'ios'
+    ? 'ios'
+    : 'android';
 
 const OPENIAP_ERROR_CODE_SET: Set<string> = new Set(
   Object.values(ErrorCode).map((code) => toStandardizedCode(code)),
@@ -103,7 +100,7 @@ export class PurchaseError extends Error {
   public debugMessage?: string;
   public code?: ErrorCode;
   public productId?: string;
-  public platform?: PurchaseErrorPlatform;
+  public platform?: IapPlatform;
 
   constructor(
     message: string,
@@ -111,7 +108,7 @@ export class PurchaseError extends Error {
     debugMessage?: string,
     code?: ErrorCode,
     productId?: string,
-    platform?: PurchaseErrorPlatform,
+    platform?: IapPlatform,
   );
   constructor(props: PurchaseErrorProps);
   constructor(
@@ -120,7 +117,7 @@ export class PurchaseError extends Error {
     debugMessage?: string,
     code?: ErrorCode,
     productId?: string,
-    platform?: PurchaseErrorPlatform,
+    platform?: IapPlatform,
   ) {
     super(
       typeof messageOrProps === 'string'
@@ -150,7 +147,7 @@ export class PurchaseError extends Error {
    */
   static fromPlatformError(
     errorData: PlatformErrorData,
-    platform: PurchaseErrorPlatform,
+    platform: IapPlatform,
   ): PurchaseError {
     const normalizedPlatform = normalizePlatform(platform);
 
@@ -197,7 +194,7 @@ export const ErrorCodeUtils = {
    */
   fromPlatformCode: (
     platformCode: string | number,
-    _platform: PurchaseErrorPlatform,
+    _platform: IapPlatform,
   ): ErrorCode => {
     if (typeof platformCode === 'string' && platformCode.startsWith('E_')) {
       if (OPENIAP_ERROR_CODE_SET.has(platformCode)) {
@@ -241,7 +238,7 @@ export const ErrorCodeUtils = {
    */
   toPlatformCode: (
     errorCode: ErrorCode,
-    _platform: PurchaseErrorPlatform,
+    _platform: IapPlatform,
   ): string | number => {
     const standardized = toStandardizedCode(errorCode);
     const native = (NATIVE_ERROR_CODES as Record<string, string | number>)[
@@ -254,7 +251,7 @@ export const ErrorCodeUtils = {
    */
   isValidForPlatform: (
     errorCode: ErrorCode,
-    platform: PurchaseErrorPlatform,
+    platform: IapPlatform,
   ): boolean => {
     const standardized = toStandardizedCode(errorCode);
     if (

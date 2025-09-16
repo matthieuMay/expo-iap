@@ -13,7 +13,6 @@ import type {
   ReceiptValidationResultIOS,
 } from '../types';
 import type {PurchaseError} from '../purchase-error';
-import {Platform as PurchasePlatform} from '../types';
 import {Linking} from 'react-native';
 
 export type TransactionEvent = {
@@ -24,15 +23,14 @@ export type TransactionEvent = {
 // Listeners
 
 // Type guards
-export function isProductIOS<T extends {platform?: string | PurchasePlatform}>(
+export function isProductIOS<T extends {platform?: string}>(
   item: unknown,
-): item is T & {platform: PurchasePlatform.Ios | 'ios'} {
+): item is T & {platform: 'ios'} {
   return (
     item != null &&
     typeof item === 'object' &&
     'platform' in item &&
-    ((item as any).platform === 'ios' ||
-      (item as any).platform === PurchasePlatform.Ios)
+    (item as any).platform === 'ios'
   );
 }
 
