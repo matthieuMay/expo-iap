@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 3.0.3 - 2025-09-14
+
+- Types: Align Expo IAP surface with [react-native-iap #3006](https://github.com/hyochan/react-native-iap/pull/3006) by renaming subscription aliases, adding StoreKit product enums, and exposing optional purchase metadata (quantity, purchaseState, isAutoRenewing).
+- Errors: Switch JS helpers and docs to camelCase `ErrorCode` members and tighten error inspection utilities to avoid `any` usage.
+
 ## 3.0.2 - 2025-09-13
 
 - iOS: Fix build error “cannot convert value of type '[[String : Any?]]'” in Expo bridge by returning non‑optional dictionaries and removing double‑serialization in `showManageSubscriptionsIOS` (Fixes #202).
