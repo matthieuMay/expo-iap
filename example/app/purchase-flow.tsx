@@ -10,15 +10,11 @@ import {
   ScrollView,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import {
-  requestPurchase,
-  useIAP,
-  getAppTransactionIOS,
-  isProductIOS,
-} from '../../src';
+import {requestPurchase, useIAP, getAppTransactionIOS} from '../../src';
 import Loading from '../src/components/Loading';
 import {PRODUCT_IDS} from '../../src/utils/constants';
-import type {Product, Purchase, PurchaseError} from '../../src/ExpoIap.types';
+import type {Product, Purchase} from '../../src/types';
+import type {PurchaseError} from '../../src/purchase-error';
 
 /**
  * Purchase Flow Example - In-App Products
@@ -369,7 +365,7 @@ export default function PurchaseFlow() {
                   {selectedProduct.type || 'N/A'}
                 </Text>
 
-                {isProductIOS(selectedProduct) && (
+                {'isFamilyShareableIOS' in selectedProduct && (
                   <>
                     <Text style={styles.modalLabel}>Is Family Shareable:</Text>
                     <Text style={styles.modalValue}>

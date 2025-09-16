@@ -8,10 +8,12 @@ import ExpoIapModule from '../ExpoIapModule';
 import type {
   Product,
   Purchase,
-  PurchaseError,
   SubscriptionStatusIOS,
-  AppTransactionIOS,
-} from '../ExpoIap.types';
+  AppTransaction,
+  ReceiptValidationResultIOS,
+} from '../types';
+import type {PurchaseError} from '../purchase-error';
+import {Platform as PurchasePlatform} from '../types';
 import {Linking} from 'react-native';
 
 export type TransactionEvent = {
@@ -22,14 +24,15 @@ export type TransactionEvent = {
 // Listeners
 
 // Type guards
-export function isProductIOS<T extends {platform?: string}>(
+export function isProductIOS<T extends {platform?: string | PurchasePlatform}>(
   item: unknown,
-): item is T & {platform: 'ios'} {
+): item is T & {platform: PurchasePlatform.Ios | 'ios'} {
   return (
     item != null &&
     typeof item === 'object' &&
     'platform' in item &&
-    item.platform === 'ios'
+    ((item as any).platform === 'ios' ||
+      (item as any).platform === PurchasePlatform.Ios)
   );
 }
 
@@ -191,12 +194,7 @@ export const getTransactionJwsIOS = (sku: string): Promise<string> => {
  */
 export const validateReceiptIOS = async (
   sku: string,
-): Promise<{
-  isValid: boolean;
-  receiptData: string;
-  jwsRepresentation: string;
-  latestTransaction?: Purchase;
-}> => {
+): Promise<ReceiptValidationResultIOS> => {
   const result = await ExpoIapModule.validateReceiptIOS(sku);
   return result;
 };
@@ -230,7 +228,7 @@ export const presentCodeRedemptionSheetIOS = (): Promise<boolean> => {
  * @platform iOS
  * @since iOS 16.0
  */
-export const getAppTransactionIOS = (): Promise<AppTransactionIOS | null> => {
+export const getAppTransactionIOS = (): Promise<AppTransaction | null> => {
   return ExpoIapModule.getAppTransactionIOS();
 };
 

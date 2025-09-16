@@ -33,23 +33,18 @@ const productIds = [
 ];
 
 function App() {
-  const {
-    connected,
-    products,
-    fetchProducts,
-    requestPurchase,
-    validateReceipt,
-  } = useIAP({
-    onPurchaseSuccess: (purchase) => {
-      console.log('Purchase successful:', purchase);
-      // Handle successful purchase
-      validatePurchase(purchase);
-    },
-    onPurchaseError: (error) => {
-      console.error('Purchase failed:', error);
-      // Handle purchase error
-    },
-  });
+  const {connected, products, fetchProducts, requestPurchase, validateReceipt} =
+    useIAP({
+      onPurchaseSuccess: (purchase) => {
+        console.log('Purchase successful:', purchase);
+        // Handle successful purchase
+        validatePurchase(purchase);
+      },
+      onPurchaseError: (error) => {
+        console.error('Purchase failed:', error);
+        // Handle purchase error
+      },
+    });
 
   React.useEffect(() => {
     if (connected) {
@@ -74,7 +69,11 @@ function App() {
       {products.map((product) => (
         <TouchableOpacity
           key={product.id}
-          onPress={() => requestPurchase({request: {sku: product.id}})}
+          onPress={() =>
+            requestPurchase({
+              request: {ios: {sku: product.id}},
+            })
+          }
         >
           <Text>
             {product.title} - {product.displayPrice}
@@ -93,7 +92,7 @@ function App() {
 #### Receipt Validation
 
 ```tsx
-const validateReceipt = async (productId: string) => {
+const validateReceiptExample = async (productId: string) => {
   try {
     const result = await validateReceipt(productId);
 
@@ -119,10 +118,10 @@ const handlePurchaseError = (error: any) => {
     case ErrorCode.UserCancelled:
       // User cancelled - don't show error
       break;
-    case ErrorCode.E_PAYMENT_NOT_ALLOWED:
+    case ErrorCode.BillingUnavailable:
       Alert.alert('Purchases are not allowed on this device');
       break;
-    case ErrorCode.E_PAYMENT_INVALID:
+    case ErrorCode.PurchaseError:
       Alert.alert('Invalid payment information');
       break;
     default:

@@ -198,7 +198,7 @@ ErrorCodeUtils.getNativeErrorCode(errorCode: ErrorCode): string
 
 ```tsx
 const nativeCode = ErrorCodeUtils.getNativeErrorCode(
-  ErrorCode.UserCancelled,
+  ErrorCode.E_USER_CANCELLED,
 );
 console.log(nativeCode); // Platform-specific code
 ```
@@ -245,7 +245,7 @@ ErrorCodeUtils.toPlatformCode(
 ```tsx
 // iOS
 const iosCode = ErrorCodeUtils.toPlatformCode(
-  ErrorCode.UserCancelled,
+  ErrorCode.E_USER_CANCELLED,
   'ios',
 );
 console.log(iosCode); // 2
