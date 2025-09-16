@@ -50,9 +50,9 @@ export type PurchaseCommon = {
   transactionDate: number;
   purchaseToken?: string; // Unified token (iOS: JWS, Android: purchaseToken)
   platform?: string;
-  quantity: number;
-  purchaseState: PurchaseState;
-  isAutoRenewing: boolean;
+  quantity?: number;
+  purchaseState?: PurchaseState;
+  isAutoRenewing?: boolean;
 };
 
 export type ProductSubscriptionCommon = ProductCommon & {

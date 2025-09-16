@@ -466,7 +466,7 @@ export const finishTransaction = ({
           return Promise.reject(
             new PurchaseError({
               message: 'Purchase token is required to finish transaction',
-              code: 'E_DEVELOPER_ERROR' as ErrorCode,
+              code: ErrorCode.DeveloperError,
               productId: androidPurchase.productId,
               platform: 'android',
             }),

@@ -5,21 +5,27 @@
 
 import {ErrorCode} from '../ExpoIap.types';
 
+type ErrorLike = string | {code?: ErrorCode | string; message?: string};
+
+function extractCode(error: unknown): string | undefined {
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  if (error && typeof error === 'object' && 'code' in error) {
+    return (error as {code?: string}).code;
+  }
+
+  return undefined;
+}
+
 /**
  * Checks if an error is a user cancellation
  * @param error Error object or error code
  * @returns True if the error represents user cancellation
  */
-export function isUserCancelledError(error: any): boolean {
-  if (typeof error === 'string') {
-    return error === ErrorCode.UserCancelled;
-  }
-
-  if (error && error.code) {
-    return error.code === ErrorCode.UserCancelled;
-  }
-
-  return false;
+export function isUserCancelledError(error: unknown): boolean {
+  return extractCode(error) === ErrorCode.UserCancelled;
 }
 
 /**
@@ -27,8 +33,8 @@ export function isUserCancelledError(error: any): boolean {
  * @param error Error object or error code
  * @returns True if the error is network-related
  */
-export function isNetworkError(error: any): boolean {
-  const networkErrors = [
+export function isNetworkError(error: unknown): boolean {
+  const networkErrors: ErrorCode[] = [
     ErrorCode.NetworkError,
     ErrorCode.RemoteError,
     ErrorCode.ServiceError,
@@ -36,8 +42,8 @@ export function isNetworkError(error: any): boolean {
     ErrorCode.BillingUnavailable,
   ];
 
-  const errorCode = typeof error === 'string' ? error : error?.code;
-  return networkErrors.includes(errorCode);
+  const code = extractCode(error);
+  return !!code && (networkErrors as string[]).includes(code);
 }
 
 /**
@@ -45,8 +51,8 @@ export function isNetworkError(error: any): boolean {
  * @param error Error object or error code
  * @returns True if the error is potentially recoverable
  */
-export function isRecoverableError(error: any): boolean {
-  const recoverableErrors = [
+export function isRecoverableError(error: unknown): boolean {
+  const recoverableErrors: ErrorCode[] = [
     ErrorCode.NetworkError,
     ErrorCode.RemoteError,
     ErrorCode.ServiceError,
@@ -57,8 +63,8 @@ export function isRecoverableError(error: any): boolean {
     ErrorCode.InitConnection,
   ];
 
-  const errorCode = typeof error === 'string' ? error : error?.code;
-  return recoverableErrors.includes(errorCode);
+  const code = extractCode(error);
+  return !!code && (recoverableErrors as string[]).includes(code);
 }
 
 /**
@@ -66,8 +72,8 @@ export function isRecoverableError(error: any): boolean {
  * @param error Error object or error code
  * @returns User-friendly error message
  */
-export function getUserFriendlyErrorMessage(error: any): string {
-  const errorCode = typeof error === 'string' ? error : error?.code;
+export function getUserFriendlyErrorMessage(error: ErrorLike): string {
+  const errorCode = extractCode(error);
 
   switch (errorCode) {
     case ErrorCode.UserCancelled:
@@ -108,7 +114,11 @@ export function getUserFriendlyErrorMessage(error: any): string {
       return 'Failed to initialize billing connection';
     case ErrorCode.QueryProduct:
       return 'Failed to query products. Please try again later.';
-    default:
-      return error?.message || 'An unexpected error occurred';
+    default: {
+      if (error && typeof error === 'object' && 'message' in error) {
+        return (error as {message?: string}).message ?? 'An unexpected error occurred';
+      }
+      return 'An unexpected error occurred';
+    }
   }
 }
