@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 3.0.4 - 2025-09-16
+
+- Types: Regenerate the OpenIAP schema with the canonical PascalCase names (`ProductIOS`, `PurchaseIOS`, etc.) and align docs/tests/examples with the new exports.
+- Errors: Promote `PurchaseError` to extend `Error`, tighten typings for platform error input/output, and ensure Android acknowledgement resolves a `VoidResult {success}` object.
+- Docs: Refresh iOS setup examples to use platform-specific request shapes, fix legacy `ErrorCode` references in versioned guides, and trim example helpers to the updated API surface.
+- Build: Adopt [openiap-gql 1.0.0](https://github.com/hyodotdev/openiap-gql/releases/tag/1.0.0) for the transport layer to stay aligned with the GraphQL contract shipped across the ecosystem.
+
 ## 3.0.3 - 2025-09-14
 
 - Types: Align Expo IAP surface with [react-native-iap #3006](https://github.com/hyochan/react-native-iap/pull/3006) by renaming subscription aliases, adding StoreKit product enums, and exposing optional purchase metadata (quantity, purchaseState, isAutoRenewing).

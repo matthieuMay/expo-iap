@@ -62,6 +62,8 @@ For complete type definitions and documentation, see: <https://www.openiap.dev/d
 
 The library follows the OpenIAP type specifications with platform-specific extensions using iOS/Android suffixes.
 
+> **Note:** `src/types.ts` is generated from the OpenIAP schema. Do **not** edit this file manually—run `npm run generate` after updating any `*.graphql` schema instead.
+
 ### React/JSX Conventions
 
 - **Conditional Rendering**: Use ternary operator with null instead of logical AND
