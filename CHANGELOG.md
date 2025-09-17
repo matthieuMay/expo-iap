@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 3.0.5 - 2025-09-17
+
+- Types: Normalize OpenIAP literal unions to `'in-app'`, `'ios'`, and `'android'`, update `useIAP` helpers to the new `PurchaseRequestInput`, and refresh docs/examples/tests to the lowercase schema tokens.
+- Tooling: Regenerate `src/types.ts` with `openiap-gql` 1.0.2, add lint/format ignores for the generated file, and document the type update workflow.
+- Native: Upgrade the Android fallback/config plugin to [openiap-google 1.1.10](https://github.com/hyodotdev/openiap-google/releases/tag/1.1.10), bump the iOS pod to [openiap 1.1.12](https://github.com/hyodotdev/openiap-apple/releases/tag/1.1.12), adopt PascalCase error codes, and wire the new request parameter models through the bridges and config plugin.
+
 ## 3.0.4 - 2025-09-16
 
 - Types: Regenerate the OpenIAP schema with the canonical PascalCase names (`ProductIOS`, `PurchaseIOS`, etc.) and align docs/tests/examples with the new exports.
