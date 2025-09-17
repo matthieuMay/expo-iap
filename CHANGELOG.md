@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.0.6 (Breaking: useIAP) - 2025-09-18
+
+- Hook: Remove the transient `currentPurchase` / `currentPurchaseError` state from `useIAP` so consumers rely exclusively on the `onPurchaseSuccess` and `onPurchaseError` callbacks for post-purchase handling. This is a light breaking tweak for hook callers, but keeps the root API untouched.
+
 ## 3.0.5 - 2025-09-17
 
 - Types: Normalize OpenIAP literal unions to `'in-app'`, `'ios'`, and `'android'`, update `useIAP` helpers to the new `PurchaseRequestInput`, and refresh docs/examples/tests to the lowercase schema tokens.
