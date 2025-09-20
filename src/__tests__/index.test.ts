@@ -26,7 +26,6 @@ import {
   deepLinkToSubscriptions,
   getAvailablePurchases,
   restorePurchases,
-  setValueAsync,
   promotedProductListenerIOS,
 } from '../index';
 import * as iosMod from '../modules/ios';
@@ -226,7 +225,7 @@ describe('Public API (index.ts)', () => {
       });
       expect(ExpoIapModule.requestPurchase).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'inapp',
+          type: 'in-app',
           skuArr: ['p1'],
           offerTokenArr: [],
         }),
@@ -389,7 +388,7 @@ describe('Public API (index.ts)', () => {
       const res = await getAvailablePurchases();
       expect(ExpoIapModule.getAvailableItems).toHaveBeenCalled();
       expect(res).toHaveLength(2);
-      expect(res.map((p) => p.id)).toEqual(['txn-1', 'txn-2']);
+      expect(res.map((p) => p.id)).toEqual(['p1', 's1']);
     });
 
     it('restorePurchases performs iOS sync then fetches purchases', async () => {
@@ -424,14 +423,24 @@ describe('Public API (index.ts)', () => {
       };
       await expect(
         finishTransaction({purchase: {...basePurchase, id: ''} as any}),
-      ).rejects.toThrow('purchase.id required');
+      ).rejects.toThrow(
+        'transaction identifier required to finish iOS transaction',
+      );
 
       (ExpoIapModule.finishTransaction as jest.Mock) = jest
         .fn()
         .mockResolvedValue(true);
+      const purchaseWithTransactionId = {
+        ...basePurchase,
+        id: 'legacy-id',
+        transactionId: 'storekit-transaction-id',
+      } as any;
       await expect(
-        finishTransaction({purchase: {...basePurchase, id: 'tid'} as any}),
+        finishTransaction({purchase: purchaseWithTransactionId}),
       ).resolves.toBeUndefined();
+      expect(ExpoIapModule.finishTransaction).toHaveBeenCalledWith(
+        'storekit-transaction-id',
+      );
     });
 
     it('Android consume vs acknowledge flows', async () => {
@@ -650,17 +659,6 @@ describe('Public API (index.ts)', () => {
       const res = await getAvailablePurchases();
       expect(res).toEqual([]);
       (Platform as any).select = originalSelect;
-    });
-  });
-
-  describe('misc', () => {
-    it('setValueAsync delegates', async () => {
-      (ExpoIapModule.setValueAsync as jest.Mock) = jest
-        .fn()
-        .mockResolvedValue('ok');
-      const res = await setValueAsync('v');
-      expect(ExpoIapModule.setValueAsync).toHaveBeenCalledWith('v');
-      expect(res).toBe('ok');
     });
   });
 });
