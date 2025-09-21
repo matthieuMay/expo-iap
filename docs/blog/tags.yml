@@ -150,3 +150,8 @@ bugfix:
   label: Bugfix
   permalink: /bugfix
   description: Bug fixes
+
+tooling:
+  label: Tooling
+  permalink: /tooling
+  description: Tooling and build pipeline updates

@@ -118,7 +118,7 @@ const loadSubscriptions = async () => {
 
 **Returns:** `Promise<Product[]>`
 
-[**Product Interface**](../types.md#product)
+[**Product Type Overview**](../types.md#product-types)
 
 ## requestPurchase()
 
