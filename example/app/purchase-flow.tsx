@@ -12,11 +12,44 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import {requestPurchase, useIAP, getAppTransactionIOS} from '../../src';
 import Loading from '../src/components/Loading';
-import {PRODUCT_IDS} from '../../src/utils/constants';
+import {
+  CONSUMABLE_PRODUCT_IDS,
+  NON_CONSUMABLE_PRODUCT_IDS,
+  PRODUCT_IDS,
+} from '../../src/utils/constants';
 import type {Product, Purchase} from '../../src/types';
 import type {PurchaseError} from '../../src/utils/errorMapping';
 import PurchaseDetails from '../src/components/PurchaseDetails';
 import PurchaseSummaryRow from '../src/components/PurchaseSummaryRow';
+
+const CONSUMABLE_PRODUCT_ID_SET = new Set(CONSUMABLE_PRODUCT_IDS);
+const NON_CONSUMABLE_PRODUCT_ID_SET = new Set(NON_CONSUMABLE_PRODUCT_IDS);
+
+const deduplicatePurchases = (purchases: Purchase[]): Purchase[] => {
+  const uniquePurchases = new Map<string, Purchase>();
+
+  for (const purchase of purchases) {
+    const productId = purchase.productId;
+    if (!productId) {
+      continue;
+    }
+
+    const existingPurchase = uniquePurchases.get(productId);
+    if (!existingPurchase) {
+      uniquePurchases.set(productId, purchase);
+      continue;
+    }
+
+    const existingTimestamp = existingPurchase.transactionDate ?? 0;
+    const newTimestamp = purchase.transactionDate ?? 0;
+
+    if (newTimestamp > existingTimestamp) {
+      uniquePurchases.set(productId, purchase);
+    }
+  }
+
+  return Array.from(uniquePurchases.values());
+};
 
 /**
  * Purchase Flow Example - In-App Products
@@ -37,9 +70,20 @@ export default function PurchaseFlow() {
   const [modalVisible, setModalVisible] = useState(false);
   const [lastPurchase, setLastPurchase] = useState<Purchase | null>(null);
   const [purchaseDetailsVisible, setPurchaseDetailsVisible] = useState(false);
+  const [purchaseDetailsTarget, setPurchaseDetailsTarget] =
+    useState<Purchase | null>(null);
+  const [refreshingAvailablePurchases, setRefreshingAvailablePurchases] =
+    useState(false);
 
   // Use the useIAP hook for managing purchases
-  const {connected, products, fetchProducts, finishTransaction} = useIAP({
+  const {
+    connected,
+    products,
+    availablePurchases,
+    fetchProducts,
+    finishTransaction,
+    getAvailablePurchases,
+  } = useIAP({
     onPurchaseSuccess: async (purchase: Purchase) => {
       // Avoid logging sensitive token in console output
       const {purchaseToken: tokenToMask, ...rest} = purchase as any;
@@ -54,6 +98,22 @@ export default function PurchaseFlow() {
       // Handle successful purchase
       setPurchaseResult('Purchase completed successfully.');
 
+      const productId = purchase.productId ?? '';
+      const isConsumablePurchase = CONSUMABLE_PRODUCT_ID_SET.has(productId);
+      if (!isConsumablePurchase && productId) {
+        if (NON_CONSUMABLE_PRODUCT_ID_SET.has(productId)) {
+          console.log(
+            '[PurchaseFlow] Non-consumable purchase recorded:',
+            productId,
+          );
+        } else {
+          console.warn(
+            '[PurchaseFlow] Purchase for product not listed in constants:',
+            productId,
+          );
+        }
+      }
+
       // IMPORTANT: Server-side receipt validation should be performed here
       // Send the receipt to your backend server for validation
       // Example (use unified token on both platforms):
@@ -64,11 +124,20 @@ export default function PurchaseFlow() {
       // }
 
       // After successful server validation, finish the transaction
-      // For consumable products (like bulb packs), set isConsumable to true
       await finishTransaction({
         purchase,
-        isConsumable: true, // Set to true for consumable products
+        isConsumable: isConsumablePurchase,
       });
+
+      try {
+        await getAvailablePurchases();
+        console.log('[PurchaseFlow] Available purchases refreshed');
+      } catch (error) {
+        console.warn(
+          '[PurchaseFlow] Failed to refresh available purchases:',
+          error,
+        );
+      }
 
       Alert.alert('Success', 'Purchase completed successfully!');
     },
@@ -85,6 +154,45 @@ export default function PurchaseFlow() {
     },
   });
 
+  const availablePurchaseRows = React.useMemo(
+    () => deduplicatePurchases(availablePurchases),
+    [availablePurchases],
+  );
+
+  const ownedNonConsumableIds = React.useMemo(() => {
+    const ids = new Set<string>();
+
+    for (const purchase of availablePurchaseRows) {
+      if (
+        purchase.productId &&
+        NON_CONSUMABLE_PRODUCT_ID_SET.has(purchase.productId)
+      ) {
+        ids.add(purchase.productId);
+      }
+    }
+
+    return ids;
+  }, [availablePurchaseRows]);
+
+  const visibleProducts = React.useMemo(() => {
+    if (ownedNonConsumableIds.size === 0) {
+      return products;
+    }
+
+    return products.filter((product) => {
+      if (!product.id) {
+        return true;
+      }
+
+      return !(
+        NON_CONSUMABLE_PRODUCT_ID_SET.has(product.id) &&
+        ownedNonConsumableIds.has(product.id)
+      );
+    });
+  }, [ownedNonConsumableIds, products]);
+
+  const hasHiddenNonConsumables = products.length > visibleProducts.length;
+
   // Load products when component mounts (guard against dev double-invoke)
   const didFetchRef = React.useRef(false);
   useEffect(() => {
@@ -100,11 +208,19 @@ export default function PurchaseFlow() {
         .catch((error) => {
           console.error('[PurchaseFlow] fetchProducts error:', error);
         });
+
+      getAvailablePurchases()
+        .then(() => {
+          console.log('[PurchaseFlow] getAvailablePurchases completed');
+        })
+        .catch((error) => {
+          console.warn('[PurchaseFlow] getAvailablePurchases error:', error);
+        });
     } else if (!connected) {
       didFetchRef.current = false; // reset when disconnected
       console.log('[PurchaseFlow] Not fetching products - not connected');
     }
-  }, [connected, fetchProducts]);
+  }, [connected, fetchProducts, getAvailablePurchases]);
 
   // Defer loading guard until after all hooks are declared
 
@@ -179,6 +295,25 @@ export default function PurchaseFlow() {
     setModalVisible(true);
   };
 
+  const handleRefreshAvailablePurchases = async () => {
+    if (refreshingAvailablePurchases) {
+      return;
+    }
+
+    setRefreshingAvailablePurchases(true);
+    try {
+      await getAvailablePurchases();
+    } catch (error) {
+      console.warn(
+        '[PurchaseFlow] Failed to refresh available purchases manually:',
+        error,
+      );
+      Alert.alert('Refresh Failed', 'Could not refresh available purchases.');
+    } finally {
+      setRefreshingAvailablePurchases(false);
+    }
+  };
+
   // Show loading screen while disconnected
   if (!connected) {
     return <Loading message="Connecting to Store..." />;
@@ -211,12 +346,14 @@ export default function PurchaseFlow() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Available Products</Text>
           <Text style={styles.sectionSubtitle}>
-            {products.length > 0
-              ? `${products.length} product(s) loaded`
+            {visibleProducts.length > 0
+              ? `${visibleProducts.length} product(s) available`
+              : hasHiddenNonConsumables
+              ? 'All non-consumable products already purchased'
               : 'Loading products...'}
           </Text>
 
-          {products.map((product) => (
+          {visibleProducts.map((product) => (
             <View key={product.id} style={styles.productCard}>
               <View style={styles.productHeader}>
                 <Text style={styles.productTitle}>{product.title}</Text>
@@ -224,6 +361,22 @@ export default function PurchaseFlow() {
               </View>
               <Text style={styles.productDescription}>
                 {product.description}
+              </Text>
+              <Text
+                style={[
+                  styles.productBadgeText,
+                  CONSUMABLE_PRODUCT_ID_SET.has(product.id)
+                    ? styles.productBadgeConsumable
+                    : NON_CONSUMABLE_PRODUCT_ID_SET.has(product.id)
+                    ? styles.productBadgeNonConsumable
+                    : null,
+                ]}
+              >
+                {CONSUMABLE_PRODUCT_ID_SET.has(product.id)
+                  ? 'Consumable product'
+                  : NON_CONSUMABLE_PRODUCT_ID_SET.has(product.id)
+                  ? 'Non-consumable product'
+                  : 'In-app product'}
               </Text>
               <View style={styles.productActions}>
                 <TouchableOpacity
@@ -248,14 +401,62 @@ export default function PurchaseFlow() {
             </View>
           ))}
 
-          {products.length === 0 && connected && (
+          {visibleProducts.length === 0 && connected && (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>
-                No products available. Please check your App Store Connect
-                configuration.
+                {hasHiddenNonConsumables
+                  ? 'All available non-consumable products have already been purchased.'
+                  : 'No products available. Please check your app store configuration.'}
               </Text>
             </View>
           )}
+        </View>
+
+        {/* Available Purchases */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Available Purchases</Text>
+          <Text style={styles.sectionSubtitle}>
+            {availablePurchaseRows.length > 0
+              ? `${availablePurchaseRows.length} stored purchase(s)`
+              : 'Purchase a non-consumable to view it here'}
+          </Text>
+
+          {availablePurchaseRows.length > 0 ? (
+            availablePurchaseRows.map((purchase) => (
+              <PurchaseSummaryRow
+                key={`${purchase.productId ?? 'unknown'}-${
+                  purchase.transactionDate ?? purchase.id ?? 'na'
+                }`}
+                purchase={purchase}
+                onPress={() => {
+                  setPurchaseDetailsTarget(purchase);
+                  setPurchaseDetailsVisible(true);
+                }}
+              />
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                No saved purchases yet. Complete a non-consumable purchase to
+                see it listed here.
+              </Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[
+              styles.refreshButton,
+              refreshingAvailablePurchases && {opacity: 0.6},
+            ]}
+            onPress={handleRefreshAvailablePurchases}
+            disabled={refreshingAvailablePurchases}
+          >
+            <Text style={styles.refreshButtonText}>
+              {refreshingAvailablePurchases
+                ? 'Refreshing purchases...'
+                : 'Refresh available purchases'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {purchaseResult || lastPurchase ? (
@@ -271,7 +472,10 @@ export default function PurchaseFlow() {
                 <Text style={styles.resultSubtitle}>Latest Purchase</Text>
                 <PurchaseSummaryRow
                   purchase={lastPurchase}
-                  onPress={() => setPurchaseDetailsVisible(true)}
+                  onPress={() => {
+                    setPurchaseDetailsTarget(lastPurchase);
+                    setPurchaseDetailsVisible(true);
+                  }}
                 />
               </View>
             ) : null}
@@ -382,30 +586,36 @@ export default function PurchaseFlow() {
         visible={purchaseDetailsVisible}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setPurchaseDetailsVisible(false)}
+        onRequestClose={() => {
+          setPurchaseDetailsVisible(false);
+          setPurchaseDetailsTarget(null);
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeaderRow}>
               <Text style={styles.modalTitle}>Purchase Details</Text>
               <TouchableOpacity
-                onPress={() => setPurchaseDetailsVisible(false)}
+                onPress={() => {
+                  setPurchaseDetailsVisible(false);
+                  setPurchaseDetailsTarget(null);
+                }}
                 style={styles.modalCloseIconButton}
               >
                 <Text style={styles.modalCloseIconText}>✕</Text>
               </TouchableOpacity>
             </View>
             <ScrollView>
-              {lastPurchase ? (
+              {purchaseDetailsTarget ? (
                 <PurchaseDetails
-                  purchase={lastPurchase}
+                  purchase={purchaseDetailsTarget}
                   containerStyle={styles.purchaseDetailsContainer}
                   rowStyle={styles.purchaseDetailRow}
                   labelStyle={styles.modalLabel}
                   valueStyle={styles.modalValue}
                 />
               ) : (
-                <Text style={styles.modalValue}>No purchase recorded.</Text>
+                <Text style={styles.modalValue}>No purchase selected.</Text>
               )}
             </ScrollView>
           </View>
@@ -500,6 +710,19 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 12,
   },
+  productBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+  },
+  productBadgeConsumable: {
+    color: '#43A047',
+  },
+  productBadgeNonConsumable: {
+    color: '#6A1B9A',
+  },
   productActions: {
     flexDirection: 'row',
     gap: 10,
@@ -585,6 +808,20 @@ const styles = StyleSheet.create({
   resultDetailsButton: {
     minHeight: 44,
     justifyContent: 'center',
+  },
+  refreshButton: {
+    marginTop: 8,
+    paddingVertical: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    alignItems: 'center',
+    backgroundColor: 'white',
+  },
+  refreshButtonText: {
+    color: '#007AFF',
+    fontWeight: '600',
+    fontSize: 14,
   },
   appTransactionButton: {
     backgroundColor: '#FF9800',
