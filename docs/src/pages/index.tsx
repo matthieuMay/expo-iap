@@ -5,6 +5,7 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import Layout from '@theme/Layout';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
+import SponsorSection from '@site/src/components/SponsorSection';
 import Heading from '@theme/Heading';
 
 import styles from './index.module.css';
@@ -36,6 +37,24 @@ function HomepageHeader() {
               >
                 Installation Guide
               </Link>
+            </div>
+            <div className={styles.heroSponsors}>
+              <h3>Our Sponsors</h3>
+              <p>
+                Expo IAP is part of the OpenIAP ecosystem standardizing in-app
+                purchases across platforms, OS, and frameworks. If these
+                libraries power your products, please consider sponsoring
+                ongoing development via{' '}
+                <a
+                  href="https://www.openiap.dev/sponsors"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  openiap.dev/sponsors
+                </a>
+                .
+              </p>
+              <SponsorSection variant="compact" showLabel={false} />
             </div>
           </div>
           <div className={styles.heroImage}>

@@ -45,8 +45,12 @@ const config: Config = {
           lastVersion: 'current',
           versions: {
             current: {
-              label: '3.0 (Current)',
+              label: '3.1 (Current)',
               path: '',
+            },
+            '3.0': {
+              label: '3.0',
+              path: '3.0',
             },
             '2.9': {
               label: '2.9',
@@ -94,15 +98,15 @@ const config: Config = {
       },
       items: [
         {
+          type: 'docsVersionDropdown',
+          position: 'left',
+          dropdownActiveClassDisabled: true,
+        },
+        {
           type: 'docSidebar',
           sidebarId: 'tutorialSidebar',
           position: 'left',
           label: 'Docs',
-        },
-        {
-          type: 'docsVersionDropdown',
-          position: 'left',
-          dropdownActiveClassDisabled: true,
         },
         {
           to: '/blog',

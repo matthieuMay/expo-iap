@@ -39,12 +39,97 @@
   
   /* Dark mode oatmeal theme */
   --ifm-navbar-background-color: #2d2520;
-  --ifm-navbar-link-color: #e6c299;
-  --ifm-navbar-link-hover-color: #f3e4d7;
+  --ifm-navbar-link-color: #ffffff;
+  --ifm-navbar-link-hover-color: #f5c26b;
   --ifm-footer-background-color: #1f1b17;
-  --ifm-footer-color: #e6c299;
+  --ifm-footer-color: #ffffff;
   --ifm-background-color: #1a1612;
-  --ifm-font-color-base: #e6c299;
+  --ifm-font-color-base: #ffffff;
+}
+
+a {
+  text-decoration: underline;
+}
+
+.button,
+.navbar__link,
+.navbar__link:focus,
+.navbar__link--active,
+.navbar__link--active:hover,
+.navbar__item .navbar__link,
+.navbar__title,
+.navbar__title:hover,
+.navbar__brand,
+.button.button,
+.blogPostTitle a,
+.blogPostTitle a:hover,
+[class^='blogPostTitle'] a,
+[class^='blogPostTitle'] a:hover,
+[class*='blogPostTitle'] a,
+[class*='blogPostTitle'] a:hover,
+.blogPostItem__title a,
+.blogPostItem__title a:hover,
+[class^='blogPostItem__title'] a,
+[class^='blogPostItem__title'] a:hover,
+.blogPostCard__title a,
+.blogPostCard__title a:hover,
+[class^='blogPostCard__title'] a,
+[class^='blogPostCard__title'] a:hover,
+.blogPostPage__hero .hero__title a,
+.blogPostPage__hero .hero__title a:hover,
+[class^='blogPostPage__hero'] .hero__title a,
+[class^='blogPostPage__hero'] .hero__title a:hover,
+.theme-blog h1 a,
+.theme-blog h1 a:hover,
+.theme-blog h2 a,
+.theme-blog h2 a:hover,
+.theme-blog h3 a,
+.theme-blog h3 a:hover,
+.theme-blog h4 a,
+.theme-blog h4 a:hover,
+.theme-blog h5 a,
+.theme-blog h5 a:hover,
+.theme-blog h6 a,
+.theme-blog h6 a:hover,
+.theme-blog [class*='sidebarItemLink'],
+.theme-blog [class*='sidebarItemLink']:hover,
+.tag,
+.tag:hover,
+.tag:focus,
+.tag__label,
+.tag__label:hover,
+.table-of-contents__link,
+.pagination-nav__label,
+.pagination-nav__sublabel,
+.menu__link,
+.footer__link-item {
+  text-decoration: none !important;
+}
+
+.navbar__link,
+.navbar__link:hover,
+.navbar__link:focus,
+.navbar__link--active,
+.navbar__link--active:hover,
+.navbar__item .navbar__link {
+  color: var(--ifm-navbar-link-color);
+}
+
+[data-theme='dark'] .navbar__link:hover,
+[data-theme='dark'] .navbar__link:focus,
+[data-theme='dark'] .navbar__link--active,
+[data-theme='dark'] .navbar__link--active:hover,
+[data-theme='dark'] .navbar__item .navbar__link:hover,
+[data-theme='dark'] .navbar__item .navbar__link:focus {
+  color: #ffffff;
+}
+
+[data-theme='dark'] code,
+[data-theme='dark'] pre,
+[data-theme='dark'] .token.string,
+[data-theme='dark'] .token.keyword,
+[data-theme='dark'] .token.function {
+  color: #ffe8b5;
 }
 
 /* Additional oatmeal theme styling */

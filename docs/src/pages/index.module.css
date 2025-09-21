@@ -40,12 +40,80 @@
   margin-bottom: 2rem;
 }
 
+.heroSponsors {
+  margin-top: 2rem;
+  padding: 0;
+}
+
+.heroSponsors h3 {
+  margin-bottom: 0.5rem;
+  color: #6b4e3d;
+}
+
+.heroSponsors p {
+  margin-bottom: 0.75rem;
+  color: #8b6f47;
+  font-size: 0.95rem;
+}
+
+.heroSponsors a {
+  color: #d58c1f;
+}
+
+[data-theme='dark'] .heroSponsors h3,
+[data-theme='dark'] .heroSponsors p,
+[data-theme='dark'] .heroSponsors [class*='description'] {
+  color: #ffffff;
+}
+
+[data-theme='dark'] .heroSponsors a {
+  color: #f5c26b;
+}
+
+.heroSponsors [class*='grid'] {
+  justify-items: flex-start;
+  margin-bottom: 0;
+}
+
+.heroSponsors [class*='card'] {
+  box-shadow: none;
+  padding: 0;
+  background: transparent;
+  align-items: flex-start;
+}
+
+.heroSponsors [class*='description'] {
+  color: #6b4e3d;
+  font-weight: 600;
+}
+
+[data-theme='dark'] .heroSponsors [class*='description'] {
+  color: #ffffff;
+}
+
+.heroSponsors :global(section[data-variant='compact']) {
+  margin: 1.25rem 0 0;
+  padding: 0;
+}
+
+.heroSponsors :global(section[data-variant='compact'] .grid) {
+  justify-content: flex-start;
+  justify-items: flex-start;
+  gap: 0.75rem;
+}
+
+.heroSponsors :global(section[data-variant='compact'] .card) {
+  padding: 0;
+  background: transparent;
+  align-items: flex-start;
+}
+
 [data-theme='dark'] .heroText h1 {
-  color: #e8d5c2;
+  color: #ffffff;
 }
 
 [data-theme='dark'] .heroText p {
-  color: #b8a08a;
+  color: #f3f0eb;
 }
 
 .heroImage {
@@ -76,7 +144,15 @@
   .heroText {
     text-align: center;
   }
-  
+
+  .heroSponsors {
+    text-align: center;
+  }
+
+  .heroSponsors [class*='grid'] {
+    justify-items: center;
+  }
+
   .heroImg {
     max-height: 300px;
   }

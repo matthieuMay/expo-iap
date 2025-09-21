@@ -2,23 +2,13 @@
 sidebar_position: 1
 ---
 
-import AdFitTopFixed from "@site/src/uis/AdFitTopFixed"; import SponsorSection from '@site/src/components/SponsorSection';
+import AdFitTopFixed from "@site/src/uis/AdFitTopFixed";
 
 # Expo IAP
 
 <AdFitTopFixed />
 
 **Expo IAP** is a powerful in-app purchase solution for Expo and React Native applications that **conforms to the [Open IAP specification](https://openiap.dev)**. It provides a unified API for handling in-app purchases across iOS and Android platforms with comprehensive error handling and modern TypeScript support.
-
-If you're shipping an app with expo-iap, we’d love to hear about it—please share your product and feedback in [Who’s using Expo IAP?](https://github.com/hyochan/expo-iap/discussions/143). Community stories help us keep improving the ecosystem.
-
-## Sponsors & Community Support
-
-We’re building the OpenIAP ecosystem—defining the spec at [openiap.dev](https://www.openiap.dev), maintaining [openiap-gql](https://github.com/hyodotdev/openiap-gql) for the shared type system, and shipping native SDKs such as [openiap-apple](https://github.com/hyodotdev/openiap-apple) and [openiap-google](https://github.com/hyodotdev/openiap-google). These modules power [expo-iap](https://github.com/hyochan/expo-iap), [flutter_inapp_purchase](https://github.com/hyochan/flutter_inapp_purchase), React Native, and [kmp-iap](https://github.com/hyochan/kmp-iap). After simplifying fragmented APIs, the next milestone is a streamlined purchase flow: `initConnection → fetchProducts → requestPurchase → (server receipt validation) → finishTransaction`.
-
-Your sponsorship keeps this work moving—ensuring more developers across platforms, OS, and frameworks can implement IAPs without headaches while we expand to additional plugins and payment systems. Sponsors receive shout-outs in each release and, depending on tier, can request tailored support. If you’re interested—or have rollout feedback to share—you can view sponsorship options at [openiap.dev/sponsors](https://www.openiap.dev/sponsors).
-
-<SponsorSection variant="compact" showLabel />
 
 ## 📚 Guides
 
@@ -28,6 +18,19 @@ Your sponsorship keeps this work moving—ensuring more developers across platfo
 - [**Migration Guide**](./guides/migration): Migrating from react-native-iap to expo-iap
 - [**FAQ**](./guides/faq): Frequently asked questions and solutions
 - [**Support**](./guides/support): Getting help and community resources
+
+### 🛠️ Advanced Topicsnd modern TypeScript support.
+
+## ✨ Features
+
+- 🔄 **Cross-platform Support**: Works seamlessly on both iOS and Android
+- 🎯 **TypeScript First**: Full TypeScript support with comprehensive type definitions
+- 🛡️ **Centralized Error Handling**: Unified error management with platform-specific error code mapping
+- 🎣 **React Hooks**: Modern React hooks API with `useIAP`
+- 📱 **Expo Compatible**: Built specifically for Expo with a seamless plugin experience
+- 🔍 **Receipt Validation**: Built-in receipt validation for both platforms
+- 💎 **Products & Subscriptions**: Support for both one-time purchases and subscriptions
+- 🚀 **Performance Optimized**: Efficient caching and minimal re-renders
 
 ## 🚀 Quick Start
 

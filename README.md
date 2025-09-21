@@ -5,9 +5,12 @@
   
   [![Version](http://img.shields.io/npm/v/expo-iap.svg?style=flat-square)](https://npmjs.org/package/expo-iap) [![Download](http://img.shields.io/npm/dm/expo-iap.svg?style=flat-square)](https://npmjs.org/package/expo-iap) [![CI](https://github.com/hyochan/expo-iap/actions/workflows/ci.yml/badge.svg)](https://github.com/hyochan/expo-iap/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/hyochan/expo-iap/graph/badge.svg?token=47VMTY5NyM)](https://codecov.io/gh/hyochan/expo-iap) [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fhyochan%2Fexpo-iap.svg?type=shield&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Fhyochan%2Fexpo-iap?ref=badge_shield&issueType=license)
   
-  In app purchase module in [Expo](https://docs.expo.dev/guides/in-app-purchases) that conforms to the [Open IAP specification](https://openiap.dev)
-  
-  <a href="https://openiap.dev"><img src="https://openiap.dev/logo.png" alt="Open IAP" height="40" /></a>
+Expo IAP is a powerful in-app purchase solution for Expo and React Native applications that conforms to the Open IAP specification. It provides a unified API for handling in-app purchases across iOS and Android platforms with comprehensive error handling and modern TypeScript support.
+
+If you're shipping an app with expo-iap, we’d love to hear about it—please share your product and feedback in [Who's using Expo IAP?](https://github.com/hyochan/expo-iap/discussions/143). Community stories help us keep improving the ecosystem.
+
+<a href="https://openiap.dev"><img src="https://openiap.dev/logo.png" alt="Open IAP" height="40" /></a>
+
 </div>
 
 ## 📚 Documentation
@@ -44,7 +47,7 @@ npx expo install expo-iap
         "expo-build-properties",
         {
           "android": {
-            "kotlinVersion": "2.0.21"
+            "kotlinVersion": "2.1.20"
           }
         }
       ]
@@ -52,6 +55,8 @@ npx expo install expo-iap
   }
 }
 ```
+
+If you're targeting Expo SDK 54 or newer, please confirm whether this manual override is still required and share findings with the community at [github.com/hyochan/expo-iap/discussions](https://github.com/hyochan/expo-iap/discussions).
 
 ## Contributing
 
@@ -67,14 +72,21 @@ For detailed usage examples and error handling, see the [documentation](https://
 
 > Sharing your thoughts—any feedback would be greatly appreciated!
 
-## Sponsors
+## Our Sponsors
 
 💼 **[View Our Sponsors](https://openiap.dev/sponsors)**
+
+We're building the OpenIAP ecosystem—defining the spec at [openiap.dev](https://www.openiap.dev), maintaining [openiap-gql](https://github.com/hyodotdev/openiap-gql) for the shared type system, and shipping platform SDKs like [openiap-apple](https://github.com/hyodotdev/openiap-apple) and [openiap-google](https://github.com/hyodotdev/openiap-google) that power [expo-iap](https://github.com/hyochan/expo-iap), [flutter_inapp_purchase](https://github.com/hyochan/flutter_inapp_purchase), React Native, and [kmp-iap](https://github.com/hyochan/kmp-iap). The work so far has focused on untangling fragmented APIs; the next milestone is a streamlined purchase flow: `initConnection → fetchProducts → requestPurchase → (server receipt validation) → finishTransaction`.
+
+Your sponsorship helps ensure developers across platforms, OS, and frameworks can implement in-app purchases without headaches. It also fuels new plugins, payment systems, and partner integrations already being explored in the OpenIAP community. Sponsors receive shout-outs in every release and can request tailored support depending on tier. If you’re interested—or have rollout feedback to share—you can view sponsorship options at [openiap.dev/sponsors](https://openiap.dev/sponsors).
 
 ### <p style="color: rgb(255, 182, 193);">Angel</p>
 
 <a href="https://meta.com">
-    <img width="600" alt="courier_dot_com" src="https://static.xx.fbcdn.net/rsrc.php/y3/r/y6QsbGgc866.svg" />
+    <div style="display: inline-flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.75rem 1rem; border-radius: 12px; background: rgba(212, 165, 116, 0.12);">
+      <img alt="Meta" src="https://www.openiap.dev/meta.svg" style="width: 120px;" />
+      <span style="font-size: 0.85rem; font-weight: 600; color: rgb(107, 78, 61); text-align: center; width: 100%;">Meta</span>
+    </div>
 </a>
 
 ## Past Supporters
