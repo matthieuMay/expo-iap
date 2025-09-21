@@ -27,6 +27,7 @@ import {
   getAvailablePurchases,
   restorePurchases,
   promotedProductListenerIOS,
+  PurchaseInput,
 } from '../index';
 import * as iosMod from '../modules/ios';
 import * as androidMod from '../modules/android';
@@ -58,9 +59,9 @@ describe('Public API (index.ts)', () => {
         expect.any(Function),
       );
       const passed = addListener.mock.calls[0][1];
-      const event = {id: 't', productId: 'p'};
+      const event = {id: 't', productId: 'p', platform: 'IOS'} as any;
       passed(event);
-      expect(fn).toHaveBeenCalledWith(event);
+      expect(fn).toHaveBeenCalledWith({...event, platform: 'ios'});
     });
 
     it('registers purchase error listener', () => {
@@ -202,13 +203,56 @@ describe('Public API (index.ts)', () => {
         },
         type: 'in-app',
       });
-      expect(ExpoIapModule.requestPurchase).toHaveBeenCalledWith(
-        expect.objectContaining({
-          sku: 'sku1',
-          andDangerouslyFinishTransactionAutomatically: true,
-        }),
-      );
+      expect(ExpoIapModule.requestPurchase).toHaveBeenCalledWith({
+        type: 'in-app',
+        request: {
+          ios: {
+            sku: 'sku1',
+            andDangerouslyFinishTransactionAutomatically: true,
+          },
+        },
+      });
       expect(res).toEqual({id: 'x'});
+    });
+
+    it('throws on unsupported iOS product type', async () => {
+      (Platform as any).OS = 'ios';
+      (ExpoIapModule.requestPurchase as jest.Mock) = jest.fn();
+      await expect(
+        requestPurchase({
+          request: {ios: {sku: 'skuX'}},
+          type: 'all',
+        } as any),
+      ).rejects.toThrow(/Unsupported product type/);
+      expect(ExpoIapModule.requestPurchase).not.toHaveBeenCalled();
+    });
+
+    it('normalizes iOS array purchases', async () => {
+      (Platform as any).OS = 'ios';
+      (ExpoIapModule.requestPurchase as jest.Mock) = jest
+        .fn()
+        .mockResolvedValue([{id: 'a', platform: 'IOS'}]);
+
+      const res = await requestPurchase({
+        request: {ios: {sku: 'skuSub'}},
+        type: 'subs',
+      });
+
+      expect(res).toEqual([{id: 'a', platform: 'ios'}]);
+    });
+
+    it('returns empty array when iOS subs resolves null', async () => {
+      (Platform as any).OS = 'ios';
+      (ExpoIapModule.requestPurchase as jest.Mock) = jest
+        .fn()
+        .mockResolvedValue(null);
+
+      const res = await requestPurchase({
+        request: {ios: {sku: 'skuSub'}},
+        type: 'subs',
+      });
+
+      expect(res).toEqual([]);
     });
 
     it('maps Android in-app request properly', async () => {
@@ -314,17 +358,15 @@ describe('Public API (index.ts)', () => {
         request: {ios: {sku: 'sku1', withOffer: offer}},
         type: 'in-app',
       } as any);
-      expect(ExpoIapModule.requestPurchase).toHaveBeenCalledWith(
-        expect.objectContaining({
-          withOffer: expect.objectContaining({
-            identifier: 'id',
-            keyIdentifier: 'key',
-            nonce: 'nonce',
-            signature: 'sig',
-            timestamp: expect.any(String),
-          }),
-        }),
-      );
+      expect(ExpoIapModule.requestPurchase).toHaveBeenCalledWith({
+        type: 'in-app',
+        request: {
+          ios: {
+            sku: 'sku1',
+            withOffer: offer,
+          },
+        },
+      });
     });
   });
 
@@ -375,7 +417,7 @@ describe('Public API (index.ts)', () => {
   });
 
   describe('finishTransaction', () => {
-    it('iOS rejects without transaction id and succeeds with id', async () => {
+    it('iOS forwards purchase payload to native finishTransaction', async () => {
       (Platform as any).OS = 'ios';
       (Platform as any).select = (obj: any) => obj.ios;
       const basePurchase = {
@@ -386,26 +428,26 @@ describe('Public API (index.ts)', () => {
         purchaseToken: 'jws-token',
         quantity: 1,
         transactionDate: Date.now(),
-      };
-      await expect(
-        finishTransaction({purchase: {...basePurchase, id: ''} as any}),
-      ).rejects.toThrow(
-        'transaction identifier required to finish iOS transaction',
-      );
-
+        id: 'transaction-identifier',
+      } as PurchaseInput;
       (ExpoIapModule.finishTransaction as jest.Mock) = jest
         .fn()
         .mockResolvedValue(true);
-      const purchaseWithTransactionId = {
-        ...basePurchase,
-        id: 'legacy-id',
-        transactionId: 'storekit-transaction-id',
-      } as any;
       await expect(
-        finishTransaction({purchase: purchaseWithTransactionId}),
+        finishTransaction({purchase: basePurchase as any}),
       ).resolves.toBeUndefined();
       expect(ExpoIapModule.finishTransaction).toHaveBeenCalledWith(
-        'storekit-transaction-id',
+        basePurchase,
+        false,
+      );
+
+      await finishTransaction({
+        purchase: basePurchase,
+        isConsumable: true,
+      });
+      expect(ExpoIapModule.finishTransaction).toHaveBeenLastCalledWith(
+        basePurchase,
+        true,
       );
     });
 
