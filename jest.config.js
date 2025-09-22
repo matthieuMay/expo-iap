@@ -36,6 +36,5 @@ module.exports = {
   coveragePathIgnorePatterns: [
     '<rootDir>/src/useIAP.ts',
     '<rootDir>/src/types.ts',
-    '<rootDir>/src/utils/constants.ts',
   ],
 };

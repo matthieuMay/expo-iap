@@ -13,7 +13,7 @@ import {
 import {useIAP, getStorefront, deepLinkToSubscriptions} from '../../src';
 import type {ActiveSubscription} from '../../src';
 import Loading from '../src/components/Loading';
-import {SUBSCRIPTION_PRODUCT_IDS} from '../../src/utils/constants';
+import {SUBSCRIPTION_PRODUCT_IDS} from '../src/utils/constants';
 import type {Purchase} from '../../src/types';
 import type {PurchaseError} from '../../src/utils/errorMapping';
 import PurchaseDetails from '../src/components/PurchaseDetails';

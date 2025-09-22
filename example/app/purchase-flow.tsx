@@ -16,7 +16,7 @@ import {
   CONSUMABLE_PRODUCT_IDS,
   NON_CONSUMABLE_PRODUCT_IDS,
   PRODUCT_IDS,
-} from '../../src/utils/constants';
+} from '../src/utils/constants';
 import type {Product, Purchase} from '../../src/types';
 import type {PurchaseError} from '../../src/utils/errorMapping';
 import PurchaseDetails from '../src/components/PurchaseDetails';

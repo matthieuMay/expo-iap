@@ -18,7 +18,7 @@ import {
   deepLinkToSubscriptions,
 } from '../../src';
 import Loading from '../src/components/Loading';
-import {SUBSCRIPTION_PRODUCT_IDS} from '../../src/utils/constants';
+import {SUBSCRIPTION_PRODUCT_IDS} from '../src/utils/constants';
 import type {
   ActiveSubscription,
   ProductSubscription,
