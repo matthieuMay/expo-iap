@@ -1,4 +1,11 @@
 name: Deploy (manual)
+# Usage:
+# - Run manually: Actions → Deploy (manual) → Run workflow
+# - Inputs:
+#   - version: 3.2.0 | patch | minor | major
+#   - tag: latest | next (controls npm dist-tag and prerelease)
+#   - create_release: set to true to create a GitHub Release with notes
+# - Requires repo secret: NPM_TOKEN (publish rights on npm)
 
 on:
   workflow_dispatch:
@@ -91,11 +98,11 @@ jobs:
           fi
 
       - name: Create GitHub Release
-        if: ${{ inputs.create_release == 'true' }}
+        if: ${{ github.event.inputs.create_release == 'true' }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.bump.outputs.version }}
-          name: v${{ steps.bump.outputs.version }}
+          tag_name: ${{ steps.bump.outputs.version }}
+          name: ${{ steps.bump.outputs.version }}
           draft: false
           prerelease: ${{ github.event.inputs.tag != 'latest' }}
           generate_release_notes: true
