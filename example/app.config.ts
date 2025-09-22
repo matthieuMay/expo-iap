@@ -10,7 +10,7 @@ export default ({config}: ConfigContext): ExpoConfig => {
     [
       '../app.plugin.js',
       {
-        enableLocalDev: true,
+        enableLocalDev: false,
         localPath: {
           ios: LOCAL_OPENIAP_PATHS.ios,
           android: LOCAL_OPENIAP_PATHS.android,
