@@ -622,7 +622,6 @@ function SubscriptionFlowContainer() {
   const [purchaseResult, setPurchaseResult] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
-  const [isHandlingPurchase, setIsHandlingPurchase] = useState(false);
   const [lastPurchase, setLastPurchase] = useState<Purchase | null>(null);
 
   const isHandlingPurchaseRef = useRef(false);
@@ -631,7 +630,6 @@ function SubscriptionFlowContainer() {
 
   const resetHandlingState = useCallback(() => {
     isHandlingPurchaseRef.current = false;
-    setIsHandlingPurchase(false);
   }, []);
 
   const {
@@ -659,7 +657,6 @@ function SubscriptionFlowContainer() {
       }
 
       isHandlingPurchaseRef.current = true;
-      setIsHandlingPurchase(true);
       setIsProcessing(false);
 
       let isPurchased = false;
@@ -789,12 +786,7 @@ function SubscriptionFlowContainer() {
     isCheckingStatusRef.current = true;
     setIsCheckingStatus(true);
     try {
-      const latestSubscriptions = await getActiveSubscriptions();
-      console.log(
-        'Active subscriptions result:',
-        latestSubscriptions?.length ?? 0,
-        latestSubscriptions,
-      );
+      getActiveSubscriptions();
     } catch (error) {
       console.error('Error checking subscription status:', error);
       console.warn(
