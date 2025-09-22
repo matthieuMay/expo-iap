@@ -49,8 +49,6 @@ import {
 type UseIap = {
   connected: boolean;
   products: Product[];
-  promotedProductsIOS: Purchase[];
-  promotedProductIdIOS?: string;
   subscriptions: ProductSubscription[];
   availablePurchases: Purchase[];
   promotedProductIOS?: Product;
@@ -96,12 +94,10 @@ export interface UseIAPOptions {
 export function useIAP(options?: UseIAPOptions): UseIap {
   const [connected, setConnected] = useState<boolean>(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [promotedProductsIOS] = useState<Purchase[]>([]);
   const [subscriptions, setSubscriptions] = useState<ProductSubscription[]>([]);
 
   const [availablePurchases, setAvailablePurchases] = useState<Purchase[]>([]);
   const [promotedProductIOS, setPromotedProductIOS] = useState<Product>();
-  const [promotedProductIdIOS] = useState<string>();
   const [activeSubscriptions, setActiveSubscriptions] = useState<
     ActiveSubscription[]
   >([]);
@@ -141,7 +137,6 @@ export function useIAP(options?: UseIAPOptions): UseIap {
   const subscriptionsRef = useRef<{
     purchaseUpdate?: EventSubscription;
     purchaseError?: EventSubscription;
-    promotedProductsIOS?: EventSubscription;
     promotedProductIOS?: EventSubscription;
   }>({});
 
@@ -376,7 +371,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
 
     if (Platform.OS === 'ios') {
       // iOS promoted products listener
-      subscriptionsRef.current.promotedProductsIOS = promotedProductListenerIOS(
+      subscriptionsRef.current.promotedProductIOS = promotedProductListenerIOS(
         (product: Product) => {
           setPromotedProductIOS(product);
 
@@ -394,9 +389,9 @@ export function useIAP(options?: UseIAPOptions): UseIap {
       // If connection failed, clean up listeners
       console.warn('[useIAP] Connection failed, cleaning up listeners...');
       subscriptionsRef.current.purchaseUpdate?.remove();
-      subscriptionsRef.current.promotedProductsIOS?.remove();
+      subscriptionsRef.current.promotedProductIOS?.remove();
       subscriptionsRef.current.purchaseUpdate = undefined;
-      subscriptionsRef.current.promotedProductsIOS = undefined;
+      subscriptionsRef.current.promotedProductIOS = undefined;
       // Keep purchaseError listener registered to capture subsequent retries
       return;
     }
@@ -409,7 +404,6 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     return () => {
       currentSubscriptions.purchaseUpdate?.remove();
       currentSubscriptions.purchaseError?.remove();
-      currentSubscriptions.promotedProductsIOS?.remove();
       currentSubscriptions.promotedProductIOS?.remove();
       endConnection();
       setConnected(false);
@@ -419,8 +413,6 @@ export function useIAP(options?: UseIAPOptions): UseIap {
   return {
     connected,
     products,
-    promotedProductsIOS,
-    promotedProductIdIOS,
     subscriptions,
     finishTransaction,
     availablePurchases,
