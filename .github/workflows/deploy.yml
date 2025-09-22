@@ -1,0 +1,101 @@
+name: Deploy (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version or semver (e.g., 3.2.0 | patch | minor | major)'
+        required: true
+        type: string
+      tag:
+        description: 'npm dist-tag to publish under'
+        required: true
+        default: latest
+        type: choice
+        options:
+          - latest
+          - next
+      create_release:
+        description: 'Also create a GitHub Release from the tag'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --immutable
+
+      - name: Lint
+        run: bun run lint:ci
+
+      - name: Verify no files have changed after auto-fix
+        run: git diff -- ":(exclude)example/*" --exit-code HEAD
+
+      - name: Prepare package
+        run: bun run prepare
+
+      - name: Configure Git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version and tag
+        id: bump
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          # Create version commit and tag (supports exact version or semver keywords)
+          npm version "$INPUT_VERSION" -m "chore(release): %s"
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Push commit and tags
+        run: |
+          git push --follow-tags
+
+      - name: Configure npm auth
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+
+      - name: Publish to npm
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ "${{ github.event.inputs.tag }}" = "latest" ]; then
+            npm publish
+          else
+            npm publish --tag ${{ github.event.inputs.tag }}
+          fi
+
+      - name: Create GitHub Release
+        if: ${{ inputs.create_release == 'true' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.bump.outputs.version }}
+          name: v${{ steps.bump.outputs.version }}
+          draft: false
+          prerelease: ${{ github.event.inputs.tag != 'latest' }}
+          generate_release_notes: true
