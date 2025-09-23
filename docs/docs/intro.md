@@ -25,7 +25,6 @@ Your sponsorship keeps this work moving—ensuring more developers across platfo
 - [**Getting Started**](./guides/getting-started): Complete guide to implementing in-app purchases
 - [**Purchase Lifecycle**](./guides/lifecycle): Understanding connection management and best practices
 - [**Purchase Implementation**](./guides/purchases): Detailed purchase flow and event handling
-- [**Migration Guide**](./guides/migration): Migrating from react-native-iap to expo-iap
 - [**FAQ**](./guides/faq): Frequently asked questions and solutions
 - [**Support**](./guides/support): Getting help and community resources
 
@@ -275,7 +274,6 @@ Expo IAP is built with a modern architecture that emphasizes:
 - [**Getting Started**](./guides/getting-started): Complete guide to implementing in-app purchases
 - [**Purchase Lifecycle**](./guides/lifecycle): Understanding connection management and best practices
 - [**Purchase Implementation**](./guides/purchases): Detailed purchase flow and event handling
-- [**Migration Guide**](./guides/migration): Migrating from react-native-iap to expo-iap
 - [**FAQ**](./guides/faq): Frequently asked questions and solutions
 - [**Support**](./guides/support): Getting help and community resources
 

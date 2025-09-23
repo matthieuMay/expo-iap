@@ -1,17 +1,9 @@
 ---
-sidebar_position: 100
 title: Sponsors
-description: Support expo-iap development through sponsorship
 ---
 
-import AdFitTopFixed from '@site/src/uis/AdFitTopFixed';
+import SponsorSection from '@site/src/components/SponsorSection';
 
-# Sponsors
+Your sponsorship keeps this work moving—ensuring more developers across platforms, OS, and frameworks can implement IAPs without headaches while we expand to additional plugins and payment systems. Sponsors receive shout-outs in each release and, depending on tier, can request tailored support. If you’re interested—or have rollout feedback to share—you can view sponsorship options at [openiap.dev/sponsors](https://www.openiap.dev/sponsors).
 
-<AdFitTopFixed />
-
-For information about our sponsors and sponsorship opportunities, please visit:
-
-👉 **[Sponsors - openiap.dev](https://openiap.dev/sponsors)**
-
-Support the development of [expo-iap](https://github.com/hyochan/expo-iap) and the broader [Open IAP](https://openiap.dev) ecosystem through the unified sponsorship program.
+<SponsorSection variant="compact" showLabel />

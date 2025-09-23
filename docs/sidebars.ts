@@ -35,10 +35,12 @@ const sidebars: SidebarsConfig = {
       items: [
         'guides/purchases',
         'guides/lifecycle',
+        'guides/subscription-offers',
         'guides/offer-code-redemption',
+        'guides/error-handling',
+        'guides/expo-plugin',
         'guides/troubleshooting',
         'guides/faq',
-        'guides/migration',
         'guides/support',
       ],
     },

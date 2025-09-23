@@ -8,7 +8,7 @@ Welcome to the Expo IAP API documentation. Here you'll find comprehensive guides
 
 Note: expo-iap follows the OpenIAP API model for consistency across platforms and SDKs. For the canonical API surface, see OpenIAP APIs:
 
-- https://www.openiap.dev/docs/apis
+- [OpenIAP APIs](https://www.openiap.dev/docs/apis)
 
 ## Available APIs
 

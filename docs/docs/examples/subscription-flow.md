@@ -319,6 +319,19 @@ export default function SubscriptionManager() {
     }
   };
 
+  /**
+   * Platform-Specific Subscription Purchase Options
+   *
+   * Android: Requires subscriptionOffers array with offer tokens from fetchProducts()
+   * subscriptionOffers: Array of AndroidSubscriptionOfferInput objects containing sku and offerToken
+   * Each offer token corresponds to a specific pricing plan (base plan, introductory offer, etc.)
+   * Without subscriptionOffers, Android purchases will fail with "number of skus (1) must match: the number of offerTokens (0)"
+   *
+   * iOS: Optional withOffer for promotional discounts
+   * withOffer: DiscountOfferInputIOS object for applying promotional offers
+   * Includes offerIdentifier, keyIdentifier, nonce, signature, and timestamp
+   * Only needed when applying specific promotional offers to the purchase
+   */
   const purchaseSubscription = async (productId) => {
     if (!connected) {
       Alert.alert('Error', 'Store is not connected');
@@ -328,15 +341,34 @@ export default function SubscriptionManager() {
     try {
       console.log('Requesting subscription:', productId);
 
+      // Find the subscription product to get offer details
+      const subscription = subscriptions.find((sub) => sub.id === productId);
+      if (!subscription) {
+        Alert.alert('Error', 'Subscription product not found');
+        return;
+      }
+
+      // 2) Build subscriptionOffers from the fetched product details
+      const subscriptionOffers = (
+        subscription.subscriptionOfferDetailsAndroid ?? []
+      ).map((offer) => ({
+        sku: subscription.id,
+        offerToken: offer.offerToken,
+      }));
+
       // Platform-specific subscription purchase requests
+      // For Android: subscriptionOffers are required for subscriptions to specify pricing plans and offer tokens
+      // For iOS: withOffer can be used for promotional offers or discounts
       await requestPurchase({
         request: {
           ios: {
             sku: productId,
             andDangerouslyFinishTransactionAutomatically: false,
+            // withOffer: { /* DiscountOfferInputIOS for promotional offers */ }
           },
           android: {
             skus: [productId],
+            subscriptionOffers,
           },
         },
         type: 'subs',

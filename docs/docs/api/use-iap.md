@@ -264,6 +264,70 @@ interface UseIAPOptions {
   };
   ```
 
+### Subscription Offers
+
+When purchasing subscriptions, you need to specify the pricing plan (offer) for each platform:
+
+#### Android Subscription Offers
+
+Android requires `subscriptionOffers` array containing offer tokens from `fetchProducts()`. Each offer token represents a specific pricing plan (base plan, introductory offer, etc.).
+
+```tsx
+const buySubscription = async (subscriptionId: string) => {
+  // 1) Fetch subscription products first
+  await fetchProducts({skus: [subscriptionId], type: 'subs'});
+
+  // 2) Find the subscription and build offers
+  const subscription = subscriptions.find((s) => s.id === subscriptionId);
+  if (!subscription) return;
+
+  const subscriptionOffers = (
+    subscription.subscriptionOfferDetailsAndroid ?? []
+  ).map((offer) => ({
+    sku: subscriptionId,
+    offerToken: offer.offerToken,
+  }));
+
+  // 3) Request purchase with offers
+  await requestPurchase({
+    request: {
+      ios: {sku: subscriptionId},
+      android: {
+        skus: [subscriptionId],
+        // Only include subscriptionOffers when offers are available
+        ...(subscriptionOffers.length > 0 && {subscriptionOffers}),
+      },
+    },
+    type: 'subs',
+  });
+};
+```
+
+**Note**: `subscriptionOffers` should only be included when subscription offers are available from `fetchProducts()`. Without offers, Android purchases will fail.
+
+#### iOS Subscription Offers
+
+iOS uses `withOffer` for promotional discounts configured in App Store Connect. This is optional and only needed for special promotional pricing.
+
+```tsx
+const buySubscriptionWithOffer = async (
+  subscriptionId: string,
+  discountOffer?: DiscountOfferInputIOS,
+) => {
+  await requestPurchase({
+    request: {
+      ios: {
+        sku: subscriptionId,
+        // Optional: apply promotional offer
+        ...(discountOffer && {withOffer: discountOffer}),
+      },
+      android: {skus: [subscriptionId]},
+    },
+    type: 'subs',
+  });
+};
+```
+
 #### Subscription helpers (hook)
 
 - `getActiveSubscriptions(subscriptionIds?) => Promise<ActiveSubscription[]>`
