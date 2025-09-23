@@ -117,7 +117,7 @@ class App extends Component {
               const isValid = await validateAndroidPurchaseOnServer({
                 purchaseToken,
                 packageName,
-                productId: purchase.id,
+                productId: purchase.productId,
               });
 
               if (!isValid) {
@@ -596,7 +596,7 @@ const {finishTransaction, validateReceipt} = useIAP({
         const isValid = await validateAndroidPurchaseOnServer({
           purchaseToken,
           packageName,
-          productId: purchase.id,
+          productId: purchase.productId,
         });
 
         if (!isValid) {
@@ -814,7 +814,7 @@ const response = await fetch('https://your-server.com/validate-ios-receipt', {
   headers: {'Content-Type': 'application/json'},
   body: JSON.stringify({
     transactionId: purchase.transactionId,
-    productId: purchase.id,
+    productId: purchase.productId,
     // Your server will fetch the receipt from Apple
   }),
 });
@@ -834,7 +834,7 @@ Your server should:
 const purchaseDetails = {
   purchaseToken: purchase.purchaseTokenAndroid,
   packageName: purchase.packageNameAndroid,
-  productId: purchase.id,
+  productId: purchase.productId,
 };
 
 // Send to your server
