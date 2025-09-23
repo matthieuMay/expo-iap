@@ -1,0 +1,167 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior
+labels: ["bug", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Please fill out the information below to help us investigate and resolve the issue.
+
+  - type: markdown
+    attributes:
+      value: |
+        ### Before You Submit
+        - **[Search existing issues](https://github.com/hyochan/expo-iap/issues)** - Your question might already be answered.
+        - **[Check the troubleshooting guide](https://hyochan.github.io/expo-iap/docs/guides/troubleshooting)** - Many common issues are covered.
+        - **For setup issues, check the platform-specific guides:**
+            - **[iOS Setup Guide](https://www.openiap.dev/docs/ios-setup)**
+            - **[Android Setup Guide](https://www.openiap.dev/docs/android-setup)**
+        - **Provide a minimal reproduction** - This helps us help you faster.
+        - **Include relevant details** - Platform, versions, error messages, etc.
+
+  - type: checkboxes
+    attributes:
+      label: Is there an existing issue for this?
+      options:
+        - label: I have searched the existing issues and found no similar bug report.
+          required: true
+
+  - type: checkboxes
+    id: latest-version-check
+    attributes:
+      label: Latest Version Check
+      description: Please confirm that this issue reproduces on the latest version of expo-iap. The library is continuously updated, and existing bugs might have been fixed in newer versions.
+      options:
+        - label: I confirmed this issue reproduces on the latest version of expo-iap.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Current Behavior
+      description: A concise description of what you're experiencing.
+      placeholder: Tell us what happens
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: A concise description of what you expected to happen.
+      placeholder: Tell us what you expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: How to Reproduce
+      description: |
+        Please provide a minimal reproduction. This helps us help you faster.
+        Steps to reproduce the behavior:
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+      placeholder: Provide a clear and concise set of steps to reproduce the issue.
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Add screenshots, if applicable, to help explain your problem.
+      placeholder: (Optional) Paste screenshots here.
+
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: Platforms
+      description: What platform(s) does this occur on?
+      multiple: true
+      options:
+        - iOS
+        - Android
+        - Web
+        - Expo Go
+        - Development Client
+        - Bare React Native
+
+  - type: input
+    id: expo-iap-version
+    attributes:
+      label: expo-iap version
+      description: What version of expo-iap are you using?
+      placeholder: e.g., 3.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: expo-sdk-version
+    attributes:
+      label: Expo SDK Version
+      description: What version of the Expo SDK are you using?
+      placeholder: e.g., 49.0.0
+    validations:
+      required: false
+
+  - type: input
+    id: react-native-version
+    attributes:
+      label: React Native Version
+      description: What version of React Native are you using?
+      placeholder: e.g., 0.72.6
+    validations:
+      required: false
+
+  - type: input
+    id: xcode-version
+    attributes:
+      label: Xcode version
+      description: What version of Xcode are you using?
+      placeholder: e.g., 14.3.1
+    validations:
+      required: false
+
+  - type: input
+    id: ios-target
+    attributes:
+      label: iOS target
+      description: What is your iOS deployment target?
+      placeholder: e.g., 15.0
+    validations:
+      required: false
+
+  - type: input
+    id: android-version
+    attributes:
+      label: Android version
+      description: What version of Android are you targeting?
+      placeholder: e.g., API 33
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Please include any relevant logs or error messages.
+        ```
+        PASTE LOGS HERE
+        ```
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here.
+    validations:
+      required: false
