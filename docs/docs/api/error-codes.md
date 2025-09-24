@@ -8,7 +8,7 @@ import AdFitTopFixed from "@site/src/uis/AdFitTopFixed";
 
 <AdFitTopFixed />
 
-Expo IAP provides a centralized error handling system with platform-specific error code mapping. This ensures consistent error handling across iOS and Android platforms.
+React Native IAP provides a centralized error handling system with platform-specific error code mapping. This ensures consistent error handling across iOS and Android platforms.
 
 ## Error Code Enum
 
@@ -17,43 +17,43 @@ Expo IAP provides a centralized error handling system with platform-specific err
 The `ErrorCode` enum provides standardized error codes that map to platform-specific errors:
 
 ```tsx
-import {ErrorCode} from 'expo-iap';
+import {ErrorCode} from 'react-native-iap';
 
 export enum ErrorCode {
-  Unknown = 'Unknown',
-  UserCancelled = 'UserCancelled',
-  UserError = 'UserError',
-  ItemUnavailable = 'ItemUnavailable',
-  RemoteError = 'RemoteError',
-  NetworkError = 'NetworkError',
-  ServiceError = 'ServiceError',
-  ReceiptFailed = 'ReceiptFailed',
-  ReceiptFinished = 'ReceiptFinished',
-  ReceiptFinishedFailed = 'ReceiptFinishedFailed',
-  NotPrepared = 'NotPrepared',
-  NotEnded = 'NotEnded',
-  AlreadyOwned = 'AlreadyOwned',
-  DeveloperError = 'DeveloperError',
-  BillingResponseJsonParseError = 'BillingResponseJsonParseError',
-  DeferredPayment = 'DeferredPayment',
-  Interrupted = 'Interrupted',
-  IapNotAvailable = 'IapNotAvailable',
-  PurchaseError = 'PurchaseError',
-  SyncError = 'SyncError',
-  TransactionValidationFailed = 'TransactionValidationFailed',
-  ActivityUnavailable = 'ActivityUnavailable',
-  AlreadyPrepared = 'AlreadyPrepared',
-  Pending = 'Pending',
-  ConnectionClosed = 'ConnectionClosed',
-  InitConnection = 'InitConnection',
-  ServiceDisconnected = 'ServiceDisconnected',
-  QueryProduct = 'QueryProduct',
-  SkuNotFound = 'SkuNotFound',
-  SkuOfferMismatch = 'SkuOfferMismatch',
-  ItemNotOwned = 'ItemNotOwned',
-  BillingUnavailable = 'BillingUnavailable',
-  FeatureNotSupported = 'FeatureNotSupported',
-  EmptySkuList = 'EmptySkuList',
+  Unknown = 'unknown',
+  UserCancelled = 'user-cancelled',
+  UserError = 'user-error',
+  ItemUnavailable = 'item-unavailable',
+  RemoteError = 'remote-error',
+  NetworkError = 'network-error',
+  ServiceError = 'service-error',
+  ReceiptFailed = 'receipt-failed',
+  ReceiptFinished = 'receipt-finished',
+  ReceiptFinishedFailed = 'receipt-finished-failed',
+  NotPrepared = 'not-prepared',
+  NotEnded = 'not-ended',
+  AlreadyOwned = 'already-owned',
+  DeveloperError = 'developer-error',
+  BillingResponseJsonParseError = 'billing-response-json-parse-error',
+  DeferredPayment = 'deferred-payment',
+  Interrupted = 'interrupted',
+  IapNotAvailable = 'iap-not-available',
+  PurchaseError = 'purchase-error',
+  SyncError = 'sync-error',
+  TransactionValidationFailed = 'transaction-validation-failed',
+  ActivityUnavailable = 'activity-unavailable',
+  AlreadyPrepared = 'already-prepared',
+  Pending = 'pending',
+  ConnectionClosed = 'connection-closed',
+  InitConnection = 'init-connection',
+  ServiceDisconnected = 'service-disconnected',
+  QueryProduct = 'query-product',
+  SkuNotFound = 'sku-not-found',
+  SkuOfferMismatch = 'sku-offer-mismatch',
+  ItemNotOwned = 'item-not-owned',
+  BillingUnavailable = 'billing-unavailable',
+  FeatureNotSupported = 'feature-not-supported',
+  EmptySkuList = 'empty-sku-list',
 }
 ```
 
@@ -88,11 +88,11 @@ export const createPurchaseError = (
 
 ### createPurchaseErrorFromPlatform
 
-Creates a `PurchaseError` from a platform-specific error.
+Creates a `PurchaseError` from platform-specific error data.
 
 ```tsx
 export const createPurchaseErrorFromPlatform = (
-  errorData: PlatformErrorData,
+  errorData: PurchaseErrorProps,
   platform: IapPlatform,
 ): PurchaseError => {
   // ...
@@ -118,7 +118,7 @@ Maps platform-specific error code to standardized ErrorCode:
 ```tsx
 ErrorCodeUtils.fromPlatformCode(
   platformCode: string | number,
-  platform: 'ios' | 'android',
+  platform?: IapPlatform,
 ): ErrorCode
 ```
 
@@ -129,7 +129,7 @@ Maps ErrorCode to platform-specific code:
 ```tsx
 ErrorCodeUtils.toPlatformCode(
   errorCode: ErrorCode,
-  platform: 'ios' | 'android',
+  platform?: IapPlatform,
 ): string | number
 ```
 
@@ -140,7 +140,7 @@ Checks if error code is valid for the specified platform:
 ```tsx
 ErrorCodeUtils.isValidForPlatform(
   errorCode: ErrorCode,
-  platform: 'ios' | 'android',
+  platform: IapPlatform,
 ): boolean
 ```
 
@@ -186,7 +186,7 @@ The `getUserFriendlyErrorMessage` function provides localized and user-friendly 
 
 | ErrorCode | Message |
 | --- | --- |
-| `UserCancelled` | 'Purchase was cancelled by user' |
+| `UserCancelled` | 'Purchase cancelled' |
 | `NetworkError` | 'Network connection error. Please check your internet connection and try again.' |
 | `ReceiptFinished` | 'Receipt already finished' |
 | `ServiceDisconnected` | 'Billing service disconnected. Please try again.' |

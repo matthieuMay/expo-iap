@@ -9,24 +9,36 @@ import {
 } from '../utils/errorMapping';
 import {ErrorCode} from '../types';
 
-jest.mock('../ExpoIapModule', () => {
-  const ERROR_CODES = {
-    E_NETWORK_ERROR: 'NATIVE_NETWORK',
-    E_BILLING_UNAVAILABLE: 3,
-    E_UNKNOWN: 'NATIVE_UNKNOWN',
-  } as const;
-
-  return {
-    __esModule: true,
-    default: {ERROR_CODES},
-    NATIVE_ERROR_CODES: ERROR_CODES,
-  };
-});
+jest.mock('../ExpoIapModule', () => ({
+  __esModule: true,
+  default: {
+    ERROR_CODES: {
+      // ErrorCode.AlreadyOwned
+      'already-owned': 'ALREADY_OWNED',
+      // ErrorCode.BillingUnavailable
+      'billing-unavailable': 3,
+      // ErrorCode.NetworkError
+      'network-error': 'NATIVE_NETWORK',
+      // ErrorCode.Unknown
+      unknown: 'NATIVE_UNKNOWN',
+    },
+  },
+  NATIVE_ERROR_CODES: {
+    // ErrorCode.AlreadyOwned
+    'already-owned': 'ALREADY_OWNED',
+    // ErrorCode.BillingUnavailable
+    'billing-unavailable': 3,
+    // ErrorCode.NetworkError
+    'network-error': 'NATIVE_NETWORK',
+    // ErrorCode.Unknown
+    unknown: 'NATIVE_UNKNOWN',
+  },
+}));
 
 describe('errorMapping utilities', () => {
   it('creates purchase error from platform code string', () => {
     const err = createPurchaseErrorFromPlatform(
-      {code: 'E_ALREADY_OWNED', message: 'dup'},
+      {code: 'ALREADY_OWNED', message: 'dup'},
       'ios',
     );
     expect(err.code).toBe(ErrorCode.AlreadyOwned);

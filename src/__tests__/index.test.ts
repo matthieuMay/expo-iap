@@ -144,7 +144,7 @@ describe('Public API (index.ts)', () => {
       await expect(
         fetchProducts({skus: [], type: 'in-app'}),
       ).rejects.toMatchObject({
-        code: 'EMPTY_SKU_LIST',
+        code: 'empty-sku-list',
       } as any);
     });
 

@@ -7,8 +7,30 @@
 import {NATIVE_ERROR_CODES} from '../ExpoIapModule';
 import {ErrorCode, IapPlatform} from '../types';
 
+const toKebabCase = (str: string): string => {
+  if (str.includes('_')) {
+    return str
+      .split('_')
+      .map((word) => word.toLowerCase())
+      .join('-');
+  } else {
+    return str
+      .replace(/([A-Z])/g, '-$1')
+      .toLowerCase()
+      .replace(/^-/, '');
+  }
+};
+
 export interface PurchaseErrorProps {
-  message: string;
+  message?: string;
+  responseCode?: number;
+  debugMessage?: string;
+  code?: ErrorCode | string | number;
+  productId?: string;
+  platform?: IapPlatform;
+}
+
+export interface PurchaseError extends Error {
   responseCode?: number;
   debugMessage?: string;
   code?: ErrorCode;
@@ -16,73 +38,48 @@ export interface PurchaseErrorProps {
   platform?: IapPlatform;
 }
 
-type PlatformErrorData = {
-  code?: string | number;
-  message?: string;
-  responseCode?: number;
-  debugMessage?: string;
-  productId?: string;
-};
-
-export type PurchaseError = Error & PurchaseErrorProps;
-
-const toStandardizedCode = (errorCode: ErrorCode): string =>
-  errorCode.startsWith('E_') ? errorCode : `E_${errorCode}`;
-
 const normalizePlatform = (platform: IapPlatform): 'ios' | 'android' =>
   typeof platform === 'string' && platform.toLowerCase() === 'ios'
     ? 'ios'
     : 'android';
 
 const COMMON_ERROR_CODE_MAP: Record<ErrorCode, string> = {
-  [ErrorCode.Unknown]: toStandardizedCode(ErrorCode.Unknown),
-  [ErrorCode.UserCancelled]: toStandardizedCode(ErrorCode.UserCancelled),
-  [ErrorCode.UserError]: toStandardizedCode(ErrorCode.UserError),
-  [ErrorCode.ItemUnavailable]: toStandardizedCode(ErrorCode.ItemUnavailable),
-  [ErrorCode.RemoteError]: toStandardizedCode(ErrorCode.RemoteError),
-  [ErrorCode.NetworkError]: toStandardizedCode(ErrorCode.NetworkError),
-  [ErrorCode.ServiceError]: toStandardizedCode(ErrorCode.ServiceError),
-  [ErrorCode.ReceiptFailed]: toStandardizedCode(ErrorCode.ReceiptFailed),
-  [ErrorCode.ReceiptFinished]: toStandardizedCode(ErrorCode.ReceiptFinished),
-  [ErrorCode.ReceiptFinishedFailed]: toStandardizedCode(
-    ErrorCode.ReceiptFinishedFailed,
-  ),
-  [ErrorCode.NotPrepared]: toStandardizedCode(ErrorCode.NotPrepared),
-  [ErrorCode.NotEnded]: toStandardizedCode(ErrorCode.NotEnded),
-  [ErrorCode.AlreadyOwned]: toStandardizedCode(ErrorCode.AlreadyOwned),
-  [ErrorCode.DeveloperError]: toStandardizedCode(ErrorCode.DeveloperError),
-  [ErrorCode.BillingResponseJsonParseError]: toStandardizedCode(
+  [ErrorCode.Unknown]: ErrorCode.Unknown,
+  [ErrorCode.UserCancelled]: ErrorCode.UserCancelled,
+  [ErrorCode.UserError]: ErrorCode.UserError,
+  [ErrorCode.ItemUnavailable]: ErrorCode.ItemUnavailable,
+  [ErrorCode.RemoteError]: ErrorCode.RemoteError,
+  [ErrorCode.NetworkError]: ErrorCode.NetworkError,
+  [ErrorCode.ServiceError]: ErrorCode.ServiceError,
+  [ErrorCode.ReceiptFailed]: ErrorCode.ReceiptFailed,
+  [ErrorCode.ReceiptFinished]: ErrorCode.ReceiptFinished,
+  [ErrorCode.ReceiptFinishedFailed]: ErrorCode.ReceiptFinishedFailed,
+  [ErrorCode.NotPrepared]: ErrorCode.NotPrepared,
+  [ErrorCode.NotEnded]: ErrorCode.NotEnded,
+  [ErrorCode.AlreadyOwned]: ErrorCode.AlreadyOwned,
+  [ErrorCode.DeveloperError]: ErrorCode.DeveloperError,
+  [ErrorCode.BillingResponseJsonParseError]:
     ErrorCode.BillingResponseJsonParseError,
-  ),
-  [ErrorCode.DeferredPayment]: toStandardizedCode(ErrorCode.DeferredPayment),
-  [ErrorCode.Interrupted]: toStandardizedCode(ErrorCode.Interrupted),
-  [ErrorCode.IapNotAvailable]: toStandardizedCode(ErrorCode.IapNotAvailable),
-  [ErrorCode.PurchaseError]: toStandardizedCode(ErrorCode.PurchaseError),
-  [ErrorCode.SyncError]: toStandardizedCode(ErrorCode.SyncError),
-  [ErrorCode.TransactionValidationFailed]: toStandardizedCode(
+  [ErrorCode.DeferredPayment]: ErrorCode.DeferredPayment,
+  [ErrorCode.Interrupted]: ErrorCode.Interrupted,
+  [ErrorCode.IapNotAvailable]: ErrorCode.IapNotAvailable,
+  [ErrorCode.PurchaseError]: ErrorCode.PurchaseError,
+  [ErrorCode.SyncError]: ErrorCode.SyncError,
+  [ErrorCode.TransactionValidationFailed]:
     ErrorCode.TransactionValidationFailed,
-  ),
-  [ErrorCode.ActivityUnavailable]: toStandardizedCode(
-    ErrorCode.ActivityUnavailable,
-  ),
-  [ErrorCode.AlreadyPrepared]: toStandardizedCode(ErrorCode.AlreadyPrepared),
-  [ErrorCode.Pending]: toStandardizedCode(ErrorCode.Pending),
-  [ErrorCode.ConnectionClosed]: toStandardizedCode(ErrorCode.ConnectionClosed),
-  [ErrorCode.InitConnection]: toStandardizedCode(ErrorCode.InitConnection),
-  [ErrorCode.ServiceDisconnected]: toStandardizedCode(
-    ErrorCode.ServiceDisconnected,
-  ),
-  [ErrorCode.QueryProduct]: toStandardizedCode(ErrorCode.QueryProduct),
-  [ErrorCode.SkuNotFound]: toStandardizedCode(ErrorCode.SkuNotFound),
-  [ErrorCode.SkuOfferMismatch]: toStandardizedCode(ErrorCode.SkuOfferMismatch),
-  [ErrorCode.ItemNotOwned]: toStandardizedCode(ErrorCode.ItemNotOwned),
-  [ErrorCode.BillingUnavailable]: toStandardizedCode(
-    ErrorCode.BillingUnavailable,
-  ),
-  [ErrorCode.FeatureNotSupported]: toStandardizedCode(
-    ErrorCode.FeatureNotSupported,
-  ),
-  [ErrorCode.EmptySkuList]: toStandardizedCode(ErrorCode.EmptySkuList),
+  [ErrorCode.ActivityUnavailable]: ErrorCode.ActivityUnavailable,
+  [ErrorCode.AlreadyPrepared]: ErrorCode.AlreadyPrepared,
+  [ErrorCode.Pending]: ErrorCode.Pending,
+  [ErrorCode.ConnectionClosed]: ErrorCode.ConnectionClosed,
+  [ErrorCode.InitConnection]: ErrorCode.InitConnection,
+  [ErrorCode.ServiceDisconnected]: ErrorCode.ServiceDisconnected,
+  [ErrorCode.QueryProduct]: ErrorCode.QueryProduct,
+  [ErrorCode.SkuNotFound]: ErrorCode.SkuNotFound,
+  [ErrorCode.SkuOfferMismatch]: ErrorCode.SkuOfferMismatch,
+  [ErrorCode.ItemNotOwned]: ErrorCode.ItemNotOwned,
+  [ErrorCode.BillingUnavailable]: ErrorCode.BillingUnavailable,
+  [ErrorCode.FeatureNotSupported]: ErrorCode.FeatureNotSupported,
+  [ErrorCode.EmptySkuList]: ErrorCode.EmptySkuList,
 };
 
 export const ErrorCodeMapping = {
@@ -90,30 +87,38 @@ export const ErrorCodeMapping = {
   android: COMMON_ERROR_CODE_MAP,
 } as const;
 
-const OPENIAP_ERROR_CODE_SET: Set<string> = new Set(
-  Object.values(ErrorCode).map((code) => toStandardizedCode(code)),
-);
+const OPENIAP_ERROR_CODE_SET: Set<string> = new Set(Object.values(ErrorCode));
 
 export const createPurchaseError = (
   props: PurchaseErrorProps,
 ): PurchaseError => {
-  const error = new Error(props.message) as PurchaseError;
+  const errorCode = props.code
+    ? typeof props.code === 'string' || typeof props.code === 'number'
+      ? ErrorCodeUtils.fromPlatformCode(props.code, props.platform || 'ios')
+      : props.code
+    : undefined;
+
+  const error = new Error(
+    props.message ?? 'Unknown error occurred',
+  ) as PurchaseError;
   error.name = '[expo-iap]: PurchaseError';
   error.responseCode = props.responseCode;
   error.debugMessage = props.debugMessage;
-  error.code = props.code;
+  error.code = errorCode;
   error.productId = props.productId;
   error.platform = props.platform;
   return error;
 };
 
 export const createPurchaseErrorFromPlatform = (
-  errorData: PlatformErrorData,
+  errorData: PurchaseErrorProps,
   platform: IapPlatform,
 ): PurchaseError => {
   const normalizedPlatform = normalizePlatform(platform);
   const errorCode = errorData.code
-    ? ErrorCodeUtils.fromPlatformCode(errorData.code, normalizedPlatform)
+    ? typeof errorData.code === 'string' || typeof errorData.code === 'number'
+      ? ErrorCodeUtils.fromPlatformCode(errorData.code, normalizedPlatform)
+      : errorData.code
     : ErrorCode.Unknown;
 
   return createPurchaseError({
@@ -128,11 +133,9 @@ export const createPurchaseErrorFromPlatform = (
 
 export const ErrorCodeUtils = {
   getNativeErrorCode: (errorCode: ErrorCode): string => {
-    const standardized = toStandardizedCode(errorCode);
     return (
-      (NATIVE_ERROR_CODES as Record<string, string | undefined>)[
-        standardized
-      ] ?? standardized
+      (NATIVE_ERROR_CODES as Record<string, string | undefined>)[errorCode] ??
+      errorCode
     );
   },
   fromPlatformCode: (
@@ -140,9 +143,12 @@ export const ErrorCodeUtils = {
     _platform: IapPlatform,
   ): ErrorCode => {
     if (typeof platformCode === 'string' && platformCode.startsWith('E_')) {
-      if (OPENIAP_ERROR_CODE_SET.has(platformCode)) {
+      const withoutE = platformCode.substring(2);
+      const camelCased = toKebabCase(withoutE);
+      const withE = `E_${camelCased}`;
+      if (OPENIAP_ERROR_CODE_SET.has(withE)) {
         const match = Object.entries(COMMON_ERROR_CODE_MAP).find(
-          ([, value]) => value === platformCode,
+          ([, value]) => value === withE,
         );
         if (match) {
           return match[0] as ErrorCode;
@@ -150,11 +156,18 @@ export const ErrorCodeUtils = {
       }
     }
 
+    const normalizedCode =
+      typeof platformCode === 'string'
+        ? toKebabCase(platformCode)
+        : platformCode;
+
     for (const [standardized, nativeCode] of Object.entries(
       (NATIVE_ERROR_CODES || {}) as Record<string, string | number>,
     )) {
+      const normalizedNative =
+        typeof nativeCode === 'string' ? toKebabCase(nativeCode) : nativeCode;
       if (
-        nativeCode === platformCode &&
+        normalizedNative === normalizedCode &&
         OPENIAP_ERROR_CODE_SET.has(standardized)
       ) {
         const match = Object.entries(COMMON_ERROR_CODE_MAP).find(
@@ -169,7 +182,10 @@ export const ErrorCodeUtils = {
     for (const [errorCode, mappedCode] of Object.entries(
       COMMON_ERROR_CODE_MAP,
     )) {
-      if (mappedCode === platformCode) {
+      if (
+        mappedCode === normalizedCode ||
+        mappedCode === `E_${normalizedCode}`
+      ) {
         return errorCode as ErrorCode;
       }
     }
@@ -180,9 +196,8 @@ export const ErrorCodeUtils = {
     errorCode: ErrorCode,
     _platform: IapPlatform,
   ): string | number => {
-    const standardized = toStandardizedCode(errorCode);
     const native = (NATIVE_ERROR_CODES as Record<string, string | number>)[
-      standardized
+      errorCode
     ];
     return native ?? COMMON_ERROR_CODE_MAP[errorCode] ?? 'E_UNKNOWN';
   },
@@ -190,14 +205,9 @@ export const ErrorCodeUtils = {
     errorCode: ErrorCode,
     platform: IapPlatform,
   ): boolean => {
-    const standardized = toStandardizedCode(errorCode);
-    if (
-      (NATIVE_ERROR_CODES as Record<string, unknown>)[standardized] !==
-      undefined
-    ) {
-      return true;
-    }
-    return standardized in ErrorCodeMapping[normalizePlatform(platform)];
+    return (
+      (NATIVE_ERROR_CODES as Record<string, unknown>)[errorCode] !== undefined
+    );
   },
 };
 
@@ -218,10 +228,19 @@ const normalizeErrorCode = (code?: string | null): string | undefined => {
     return code;
   }
 
+  const camelCased = toKebabCase(code);
+  if (ERROR_CODES.has(camelCased)) {
+    return camelCased;
+  }
+
   if (code.startsWith('E_')) {
     const trimmed = code.substring(2);
     if (ERROR_CODES.has(trimmed)) {
       return trimmed;
+    }
+    const camelTrimmed = toKebabCase(trimmed);
+    if (ERROR_CODES.has(camelTrimmed)) {
+      return camelTrimmed;
     }
   }
 

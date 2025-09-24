@@ -9,26 +9,69 @@ import AdFitTopFixed from "@site/src/uis/AdFitTopFixed";
 
 <AdFitTopFixed />
 
-All methods can throw errors that should be handled appropriately. Use the `PurchaseError` type to get consistent, cross‑platform error information.
+All methods can throw errors that should be handled appropriately. Use the `PurchaseError` type and helper functions for consistent, cross‑platform error information.
 
 ```ts
-import {PurchaseError, requestPurchase} from 'expo-iap';
+import {
+  PurchaseError,
+  requestPurchase,
+  isUserCancelledError,
+  isNetworkError,
+  getUserFriendlyErrorMessage,
+  ErrorCode,
+} from 'react-native-iap';
 
 try {
   await requestPurchase({request: {sku: 'product_id'}});
 } catch (error) {
-  if (error instanceof PurchaseError) {
-    switch (error.code) {
-      case 'E_USER_CANCELLED':
-        console.log('User cancelled purchase');
-        break;
-      case 'E_NETWORK_ERROR':
-        console.log('Network error, please try again');
-        break;
-      default:
-        console.error('Purchase failed:', error.message);
-    }
+  // Check for user cancellation
+  if (isUserCancelledError(error)) {
+    console.log('User cancelled purchase');
+    return;
   }
+
+  // Check for network errors
+  if (isNetworkError(error)) {
+    console.log('Network error, please try again');
+    return;
+  }
+
+  // Get user-friendly error message
+  const friendlyMessage = getUserFriendlyErrorMessage(error);
+  console.error('Purchase failed:', friendlyMessage);
+
+  // Or access error details directly
+  if (error instanceof PurchaseError) {
+    console.error(`Error code: ${error.code}, Message: ${error.message}`);
+  }
+}
+```
+
+## Error Types
+
+### PurchaseError
+
+The `PurchaseError` interface extends the standard `Error` class with additional purchase-specific properties:
+
+```ts
+interface PurchaseError extends Error {
+  code?: ErrorCode;
+  responseCode?: number;
+  debugMessage?: string;
+  productId?: string;
+  platform?: IapPlatform;
+}
+```
+
+### ErrorCode Enum
+
+Use the `ErrorCode` enum for type-safe error code comparisons:
+
+```ts
+import {ErrorCode} from 'react-native-iap';
+
+if (error instanceof PurchaseError && error.code === ErrorCode.UserCancelled) {
+  // Handle user cancellation
 }
 ```
 
