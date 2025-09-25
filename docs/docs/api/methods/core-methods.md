@@ -137,50 +137,46 @@ Initiates a purchase request for products or subscriptions.
 import {requestPurchase} from 'expo-iap';
 
 // Product purchase
-const buyProduct = async (productId: string) => {
-  try {
-    await requestPurchase({
-      request: {
-        ios: {
-          sku: productId,
-          quantity: 1,
-        },
-        android: {
-          skus: [productId],
-        },
+const buyProduct = (productId: string) => {
+  requestPurchase({
+    request: {
+      ios: {
+        sku: productId,
+        quantity: 1,
       },
-      type: 'in-app',
-    });
-  } catch (error) {
-    console.error('Purchase failed:', error);
-  }
+      android: {
+        skus: [productId],
+      },
+    },
+    type: 'in-app',
+  });
+  // Purchase result is handled via purchaseUpdatedListener/purchaseErrorListener or useIAP hook's onPurchaseSuccess/onPurchaseError callbacks
 };
 
 // Subscription purchase
-const buySubscription = async (subscriptionId: string, subscription?: any) => {
-  try {
-    await requestPurchase({
-      request: {
-        ios: {
-          sku: subscriptionId,
-          appAccountToken: 'user-123',
-        },
-        android: {
-          skus: [subscriptionId],
-          subscriptionOffers:
-            subscription?.subscriptionOfferDetails?.map((offer) => ({
-              sku: subscriptionId,
-              offerToken: offer.offerToken,
-            })) || [],
-        },
+const buySubscription = (subscriptionId: string, subscription?: any) => {
+  requestPurchase({
+    request: {
+      ios: {
+        sku: subscriptionId,
+        appAccountToken: 'user-123',
       },
-      type: 'subs',
-    });
-  } catch (error) {
-    console.error('Subscription failed:', error);
-  }
+      android: {
+        skus: [subscriptionId],
+        subscriptionOffers:
+          subscription?.subscriptionOfferDetails?.map((offer) => ({
+            sku: subscriptionId,
+            offerToken: offer.offerToken,
+          })) || [],
+      },
+    },
+    type: 'subs',
+  });
+  // Purchase result is handled via purchaseUpdatedListener/purchaseErrorListener or useIAP hook's onPurchaseSuccess/onPurchaseError callbacks
 };
 ```
+
+**Note:** `requestPurchase` initiates the purchase flow but does not return the purchase result directly. Instead, handle purchase outcomes through [`purchaseUpdatedListener`](listeners.md#purchaseupdatedlistener) and [`purchaseErrorListener`](listeners.md#purchaseerrorlistener) event listeners or the `useIAP` hook's `onPurchaseSuccess` and `onPurchaseError` callbacks.
 
 ### Detailed Platform Examples
 
@@ -227,6 +223,8 @@ await requestPurchase({
 **Returns:** `Promise<Purchase | Purchase[] | void>`
 
 **Note:** The actual purchase result is delivered through purchase listeners or the `useIAP` hook callbacks, not as a return value.
+
+**Note on Consumable Products:** `requestPurchase` is called the same way for both consumable and non-consumable products using `type: 'in-app'`. The consumable behavior is determined later in `finishTransaction()` by setting `isConsumable: true` for consumable products.
 
 #### Important Subscription Properties
 
