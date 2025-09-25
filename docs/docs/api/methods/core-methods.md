@@ -305,6 +305,11 @@ const restorePurchases = async () => {
 
 **Returns:** `Promise<Purchase[]>`
 
+**Platform behavior:**
+
+- **iOS** – The optional flags are forwarded to StoreKit 2. `onlyIncludeActiveItemsIOS` defaults to `true`, so results only include active entitlements unless you explicitly pass `false`. Setting `alsoPublishToEventListenerIOS` mirrors the restored purchases through [`purchaseUpdatedListener`](listeners.md#purchaseupdatedlistener) and [`purchaseErrorListener`](listeners.md#purchaseerrorlistener) for apps that consume those callbacks directly.
+- **Android** – Google Play separates `inapp` (one-time) and `subs` purchases. The library queries both internally, merges the results, and then runs the unified validation flow, so no additional options are required and both product classes are returned together.
+
 ## deepLinkToSubscriptions()
 
 Opens the platform-specific subscription management UI.
@@ -388,18 +393,23 @@ const checkSubscriptions = async () => {
 interface ActiveSubscription {
   productId: string;
   isActive: boolean;
-  expirationDateIOS?: Date;
-  autoRenewingAndroid?: boolean;
-  environmentIOS?: string;
-  willExpireSoon?: boolean;
-  daysUntilExpirationIOS?: number;
+  transactionId: string;
+  transactionDate: number; // Epoch milliseconds
+  expirationDateIOS?: number | null; // Epoch milliseconds
+  daysUntilExpirationIOS?: number | null;
+  willExpireSoon?: boolean | null;
+  environmentIOS?: string | null; // "Sandbox" | "Production"
+  autoRenewingAndroid?: boolean | null;
+  purchaseToken?: string | null; // JWS (iOS) or purchaseToken (Android)
 }
 ```
 
+> Optional properties may be `undefined` or `null` when the store does not provide the value (for example, `expirationDateIOS` is only present for auto-renewing products).
+
 **Platform Behavior:**
 
-- **iOS**: Uses `expirationDateIos` to determine subscription status. Includes expiration date and days until expiration.
-- **Android**: Uses purchase list presence and `autoRenewingAndroid` flag to determine status.
+- **iOS** – Derives status from the latest StoreKit transaction, populating `expirationDateIOS`, `daysUntilExpirationIOS`, and `willExpireSoon` when available.
+- **Android** – Aggregates billing client purchases across base plans and auto-renewing states; `autoRenewingAndroid` reflects the current renewal preference.
 
 ## hasActiveSubscriptions()
 
