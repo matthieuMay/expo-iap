@@ -1,3 +1,5 @@
+/* eslint-env jest */
+
 // Jest setup for example app
 import '@testing-library/jest-native/extend-expect';
 
@@ -12,9 +14,20 @@ jest.mock('expo-splash-screen', () => ({
   hideAsync: jest.fn(),
 }));
 
-// Mock react-native modules that cause issues in test environment
-// Skip mocking NativeAnimatedHelper as it's not available in newer React Native versions
-// jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
+// Mock react-native Animated API to avoid TouchableOpacity animation issues
+// Create a manual mock for Animated to prevent TouchableOpacity errors
+jest.mock('react-native', () => {
+  const RN = jest.requireActual('react-native');
+
+  // Override Animated.timing to return a simple mock
+  RN.Animated.timing = () => ({
+    start: (callback) => callback && callback({finished: true}),
+    stop: jest.fn(),
+    reset: jest.fn(),
+  });
+
+  return RN;
+});
 
 // Mock expo-modules-core
 jest.mock('expo-modules-core', () => ({
@@ -29,8 +42,6 @@ jest.mock('expo-iap', () => {
   const mockGetAvailablePurchases = jest.fn();
   const mockFinishTransaction = jest.fn();
   const mockGetActiveSubscriptions = jest.fn();
-  const mockGetProducts = jest.fn();
-  const mockGetSubscriptions = jest.fn();
   const mockRequestPurchase = jest.fn();
 
   return {
@@ -45,7 +56,6 @@ jest.mock('expo-iap', () => {
     getAvailablePurchases: mockGetAvailablePurchases,
 
     // iOS functions with IOS suffix
-    getStorefrontIOS: jest.fn(),
     syncIOS: jest.fn(),
     isEligibleForIntroOfferIOS: jest.fn(),
     subscriptionStatusIOS: jest.fn(),

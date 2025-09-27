@@ -1,8 +1,8 @@
 import type {ConfigContext, ExpoConfig} from '@expo/config';
 
 const LOCAL_OPENIAP_PATHS = {
-  ios: '/Users/crossplatformkorea/Github/hyodotdev/openiap-apple',
-  android: '/Users/crossplatformkorea/Github/hyodotdev/openiap-google',
+  ios: '/Users/hyo/Github/hyodotdev/openiap-apple',
+  android: '/Users/hyo/Github/hyodotdev/openiap-google',
 } as const;
 
 export default ({config}: ConfigContext): ExpoConfig => {
@@ -10,7 +10,7 @@ export default ({config}: ConfigContext): ExpoConfig => {
     [
       '../app.plugin.js',
       {
-        enableLocalDev: true,
+        enableLocalDev: false,
         localPath: {
           ios: LOCAL_OPENIAP_PATHS.ios,
           android: LOCAL_OPENIAP_PATHS.android,
@@ -31,7 +31,10 @@ export default ({config}: ConfigContext): ExpoConfig => {
       'expo-build-properties',
       {
         android: {
-          kotlinVersion: '2.0.21',
+          kotlinVersion: '2.1.20',
+        },
+        ios: {
+          deploymentTarget: '15.1',
         },
       },
     ],
@@ -46,7 +49,6 @@ export default ({config}: ConfigContext): ExpoConfig => {
     icon: './assets/images/icon.png',
     scheme: 'expo-iap-example',
     userInterfaceStyle: 'automatic',
-    newArchEnabled: true,
     ios: {
       ...config.ios,
       supportsTablet: true,

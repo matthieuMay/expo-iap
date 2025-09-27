@@ -330,7 +330,7 @@ const openSubscriptionSettings = () => {
 
 ## getStorefront()
 
-Return the storefront in ISO 3166-1 alpha-2 or ISO 3166-1 alpha-3 format
+Returns the current storefront in ISO 3166-1 alpha-2 or ISO 3166-1 alpha-3 format. Works on iOS and Android; on other platforms it resolves to an empty string.
 
 ```tsx
 import {getStorefront} from 'expo-iap';
@@ -497,18 +497,6 @@ if (pending.length) {
 ```
 
 Returns: `Promise<void>`
-
-### getStorefrontIOS()
-
-Returns the current App Store storefront country code (for example, "US", "GB").
-
-```ts
-import {getStorefrontIOS} from 'expo-iap';
-
-const storefront = await getStorefrontIOS();
-```
-
-Returns: `Promise<string>`
 
 ### getPromotedProductIOS()
 

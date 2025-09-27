@@ -9,7 +9,6 @@ import {
   validateReceiptIOS,
   deepLinkToSubscriptionsIOS,
   syncIOS,
-  getStorefrontIOS,
 } from './modules/ios';
 import {
   isProductAndroid,
@@ -292,15 +291,11 @@ export const getAvailablePurchases: QueryField<
   return normalizePurchaseArray(purchases as Purchase[]);
 };
 
-export const getStorefront: QueryField<'getStorefrontIOS'> = async () => {
-  // Cross-platform storefront
-  if (Platform.OS === 'android') {
-    if (typeof ExpoIapModule.getStorefrontAndroid === 'function') {
-      return ExpoIapModule.getStorefrontAndroid();
-    }
+export const getStorefront: QueryField<'getStorefront'> = async () => {
+  if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
     return '';
   }
-  return getStorefrontIOS();
+  return ExpoIapModule.getStorefront();
 };
 
 /**
