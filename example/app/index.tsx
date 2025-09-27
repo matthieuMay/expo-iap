@@ -43,6 +43,13 @@ export default function Home() {
       </Text>
 
       <View style={styles.buttonContainer}>
+        <Link href="/all-products" asChild>
+          <TouchableOpacity style={[styles.button, styles.allProductsButton]}>
+            <Text style={styles.buttonText}>📱 All Products</Text>
+            <Text style={styles.buttonSubtext}>View all items at once</Text>
+          </TouchableOpacity>
+        </Link>
+
         <Link href="/purchase-flow" asChild>
           <TouchableOpacity style={[styles.button, styles.primaryButton]}>
             <Text style={styles.buttonText}>🛒 In-App Purchase Flow</Text>
@@ -119,6 +126,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     alignItems: 'center',
+  },
+  allProductsButton: {
+    backgroundColor: '#FF6B6B',
   },
   primaryButton: {
     backgroundColor: '#007AFF',

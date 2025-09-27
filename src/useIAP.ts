@@ -37,6 +37,8 @@ import type {
   PurchaseInput,
   ReceiptValidationProps,
   ReceiptValidationResult,
+  ProductAndroid,
+  ProductSubscriptionIOS,
 } from './types';
 import {ErrorCode} from './types';
 import type {PurchaseError} from './utils/errorMapping';
@@ -159,6 +161,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
       if (!value) {
         return 'in-app';
       }
+
       const normalized = value.trim().toLowerCase().replace(/[_-]/g, '');
       return normalized === 'subs' ? 'subs' : 'in-app';
     },
@@ -191,6 +194,8 @@ export function useIAP(options?: UseIAPOptions): UseIap {
         const result = await fetchProducts(request);
         const items = (result ?? []) as (Product | ProductSubscription)[];
 
+        console.log('Fetched products:', items);
+
         if (queryType === 'subs') {
           const subscriptionsResult = items as ProductSubscription[];
           setSubscriptions((prevSubscriptions) =>
@@ -210,12 +215,40 @@ export function useIAP(options?: UseIAPOptions): UseIap {
             ),
           );
         } else {
-          const productItems = items.filter(
-            (item) => canonicalProductType(item.type as string) === 'in-app',
-          ) as Product[];
-          const subscriptionItems = items.filter(
-            (item) => canonicalProductType(item.type as string) === 'subs',
-          ) as ProductSubscription[];
+          // For 'all' type, need to properly distinguish between products and subscriptions
+          // On Android, check subscriptionOfferDetailsAndroid to determine if it's a real subscription
+          const productItems = items.filter((item) => {
+            // iOS: check type
+            if (Platform.OS === 'ios') {
+              return canonicalProductType(item.type as string) === 'in-app';
+            }
+            // Android: check if it has actual subscription details
+            const androidItem = item as ProductAndroid;
+            return (
+              !androidItem.subscriptionOfferDetailsAndroid ||
+              (Array.isArray(androidItem.subscriptionOfferDetailsAndroid) &&
+                androidItem.subscriptionOfferDetailsAndroid.length === 0)
+            );
+          }) as Product[];
+
+          const subscriptionItems = items.filter((item) => {
+            // iOS: check type
+            if (Platform.OS === 'ios') {
+              return (
+                canonicalProductType(
+                  item.type as ProductSubscriptionIOS['type'],
+                ) === 'subs'
+              );
+            }
+            // Android: check if it has actual subscription details
+            const androidItem = item as ProductAndroid;
+
+            return (
+              androidItem.subscriptionOfferDetailsAndroid &&
+              Array.isArray(androidItem.subscriptionOfferDetailsAndroid) &&
+              androidItem.subscriptionOfferDetailsAndroid.length > 0
+            );
+          }) as ProductSubscription[];
 
           setProducts((prevProducts) =>
             mergeWithDuplicateCheck(
