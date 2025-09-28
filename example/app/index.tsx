@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import {Link} from 'expo-router';
-import {getStorefront} from 'expo-iap';
+import {getStorefront, ExpoIapConsole} from 'expo-iap';
 
 /**
  * Example App Landing Page
@@ -19,7 +19,7 @@ export default function Home() {
       })
       .catch((error) => {
         // Silently fail on unsupported platforms
-        console.log('Storefront not available:', error.message);
+        ExpoIapConsole.log('Storefront not available:', error.message);
       });
   }, []);
 

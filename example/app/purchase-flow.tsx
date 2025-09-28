@@ -15,6 +15,7 @@ import {
   useIAP,
   getAppTransactionIOS,
   getStorefront,
+  ExpoIapConsole,
 } from '../../src';
 import Loading from '../src/components/Loading';
 import {
@@ -577,7 +578,10 @@ function PurchaseFlowContainer() {
         ...(tokenToMask ? {purchaseToken: 'hidden'} : {}),
       };
       console.log('Purchase successful:', masked);
-      console.log('[PurchaseFlow] purchaseState:', purchase.purchaseState);
+      ExpoIapConsole.log(
+        '[PurchaseFlow] purchaseState:',
+        purchase.purchaseState,
+      );
       setLastPurchase(purchase);
       setIsProcessing(false);
 
@@ -589,12 +593,12 @@ function PurchaseFlowContainer() {
       const isConsumablePurchase = CONSUMABLE_PRODUCT_ID_SET.has(productId);
       if (!isConsumablePurchase && productId) {
         if (NON_CONSUMABLE_PRODUCT_ID_SET.has(productId)) {
-          console.log(
+          ExpoIapConsole.log(
             '[PurchaseFlow] Non-consumable purchase recorded:',
             productId,
           );
         } else {
-          console.warn(
+          ExpoIapConsole.warn(
             '[PurchaseFlow] Purchase for product not listed in constants:',
             productId,
           );
@@ -607,14 +611,14 @@ function PurchaseFlowContainer() {
           isConsumable: isConsumablePurchase,
         });
       } catch (error) {
-        console.warn('[PurchaseFlow] finishTransaction failed:', error);
+        ExpoIapConsole.warn('[PurchaseFlow] finishTransaction failed:', error);
       }
 
       try {
         await getAvailablePurchases();
-        console.log('[PurchaseFlow] Available purchases refreshed');
+        ExpoIapConsole.log('[PurchaseFlow] Available purchases refreshed');
       } catch (error) {
-        console.warn(
+        ExpoIapConsole.warn(
           '[PurchaseFlow] Failed to refresh available purchases:',
           error,
         );
@@ -632,29 +636,37 @@ function PurchaseFlowContainer() {
   const didFetchRef = useRef(false);
 
   useEffect(() => {
-    console.log('[PurchaseFlow] useEffect - connected:', connected);
-    console.log('[PurchaseFlow] PRODUCT_IDS:', PRODUCT_IDS);
+    ExpoIapConsole.log('[PurchaseFlow] useEffect - connected:', connected);
+    ExpoIapConsole.log('[PurchaseFlow] PRODUCT_IDS:', PRODUCT_IDS);
     if (connected && !didFetchRef.current) {
       didFetchRef.current = true;
-      console.log('[PurchaseFlow] Calling fetchProducts with:', PRODUCT_IDS);
+      ExpoIapConsole.log(
+        '[PurchaseFlow] Calling fetchProducts with:',
+        PRODUCT_IDS,
+      );
       fetchProducts({skus: PRODUCT_IDS, type: 'in-app'})
         .then(() => {
-          console.log('[PurchaseFlow] fetchProducts completed');
+          ExpoIapConsole.log('[PurchaseFlow] fetchProducts completed');
         })
         .catch((error) => {
-          console.error('[PurchaseFlow] fetchProducts error:', error);
+          ExpoIapConsole.error('[PurchaseFlow] fetchProducts error:', error);
         });
 
       getAvailablePurchases()
         .then(() => {
-          console.log('[PurchaseFlow] getAvailablePurchases completed');
+          ExpoIapConsole.log('[PurchaseFlow] getAvailablePurchases completed');
         })
         .catch((error) => {
-          console.warn('[PurchaseFlow] getAvailablePurchases error:', error);
+          ExpoIapConsole.warn(
+            '[PurchaseFlow] getAvailablePurchases error:',
+            error,
+          );
         });
     } else if (!connected) {
       didFetchRef.current = false;
-      console.log('[PurchaseFlow] Not fetching products - not connected');
+      ExpoIapConsole.log(
+        '[PurchaseFlow] Not fetching products - not connected',
+      );
     }
   }, [connected, fetchProducts, getAvailablePurchases]);
 
@@ -667,7 +679,7 @@ function PurchaseFlowContainer() {
     try {
       await getAvailablePurchases();
     } catch (error) {
-      console.warn(
+      ExpoIapConsole.warn(
         '[PurchaseFlow] Failed to refresh available purchases manually:',
         error,
       );
@@ -683,7 +695,9 @@ function PurchaseFlowContainer() {
       setPurchaseResult('Processing purchase...');
 
       if (typeof requestPurchase !== 'function') {
-        console.warn('[PurchaseFlow] requestPurchase missing (test/mock env)');
+        ExpoIapConsole.warn(
+          '[PurchaseFlow] requestPurchase missing (test/mock env)',
+        );
         setIsProcessing(false);
         setPurchaseResult('Cannot start purchase in test/mock environment.');
         return;
@@ -712,7 +726,7 @@ function PurchaseFlowContainer() {
       const code = await getStorefront();
       setStorefront(code ?? '');
     } catch (error) {
-      console.warn('[PurchaseFlow] getStorefront error:', error);
+      ExpoIapConsole.warn('[PurchaseFlow] getStorefront error:', error);
       setStorefrontError(
         error instanceof Error ? error.message : 'Failed to load storefront',
       );

@@ -7,7 +7,7 @@ import {
   Modal,
   ScrollView,
 } from 'react-native';
-import {useIAP} from '../../src';
+import {useIAP, ExpoIapConsole} from '../../src';
 import Loading from '../src/components/Loading';
 import {
   PRODUCT_IDS,
@@ -35,17 +35,17 @@ function AllProducts() {
   const {connected, products, subscriptions, fetchProducts} = useIAP();
 
   useEffect(() => {
-    console.log('[AllProducts] useEffect - connected:', connected);
+    ExpoIapConsole.log('[AllProducts] useEffect - connected:', connected);
     if (connected) {
-      console.log('[AllProducts] Fetching all products');
+      ExpoIapConsole.log('[AllProducts] Fetching all products');
 
       // Fetch all products with type 'all'
       fetchProducts({skus: ALL_PRODUCT_IDS, type: 'all'})
         .then(() => {
-          console.log('[AllProducts] fetchProducts completed');
+          ExpoIapConsole.log('[AllProducts] fetchProducts completed');
         })
         .catch((error) => {
-          console.error('[AllProducts] fetchProducts error:', error);
+          ExpoIapConsole.error('[AllProducts] fetchProducts error:', error);
         });
     }
   }, [connected, fetchProducts]);

@@ -165,7 +165,8 @@ describe('Public API (index.ts)', () => {
       await fetchProducts({skus: ['legacy'], type: 'inapp' as any});
 
       expect(warnSpy).toHaveBeenCalledWith(
-        "expo-iap: 'inapp' product type is deprecated and will be removed in v3.1.0. Use 'in-app' instead.",
+        '[Expo-IAP]',
+        "'inapp' product type is deprecated and will be removed in v3.1.0. Use 'in-app' instead.",
       );
       warnSpy.mockRestore();
     });

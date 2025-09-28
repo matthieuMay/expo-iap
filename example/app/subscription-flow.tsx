@@ -16,6 +16,7 @@ import {
   useIAP,
   showManageSubscriptionsIOS,
   deepLinkToSubscriptions,
+  ExpoIapConsole,
 } from '../../src';
 import Loading from '../src/components/Loading';
 import {SUBSCRIPTION_PRODUCT_IDS} from '../src/utils/constants';
@@ -234,10 +235,10 @@ function SubscriptionFlow({
     };
 
     const logToConsole = () => {
-      console.log('=== SUBSCRIPTION DATA ===');
-      console.log(subscription);
-      console.log('=== SUBSCRIPTION JSON ===');
-      console.log(jsonString);
+      ExpoIapConsole.log('=== SUBSCRIPTION DATA ===');
+      ExpoIapConsole.log(subscription);
+      ExpoIapConsole.log('=== SUBSCRIPTION JSON ===');
+      ExpoIapConsole.log(jsonString);
       Alert.alert('Console', 'Subscription data logged to console');
     };
 
@@ -648,11 +649,13 @@ function SubscriptionFlowContainer() {
         ...rest,
         ...(tokenToMask ? {purchaseToken: 'hidden'} : {}),
       };
-      console.log('Subscription successful:', masked);
+      ExpoIapConsole.log('Subscription successful:', masked);
       setLastPurchase(purchase);
 
       if (isHandlingPurchaseRef.current) {
-        console.log('Already handling a purchase, skipping duplicate callback');
+        ExpoIapConsole.log(
+          'Already handling a purchase, skipping duplicate callback',
+        );
         return;
       }
 
@@ -680,28 +683,31 @@ function SubscriptionFlowContainer() {
             iosPurchase.transactionReasonIOS !== 'PURCHASE',
         );
 
-        console.log('iOS Purchase Analysis:');
-        console.log('  hasValidToken:', hasValidToken);
-        console.log('  hasValidTransactionId:', hasValidTransactionId);
-        console.log('  isPurchased:', isPurchased);
-        console.log('  isRestoration:', isRestoration);
-        console.log(
+        ExpoIapConsole.log('iOS Purchase Analysis:');
+        ExpoIapConsole.log('  hasValidToken:', hasValidToken);
+        ExpoIapConsole.log('  hasValidTransactionId:', hasValidTransactionId);
+        ExpoIapConsole.log('  isPurchased:', isPurchased);
+        ExpoIapConsole.log('  isRestoration:', isRestoration);
+        ExpoIapConsole.log(
           '  originalTransactionId:',
           iosPurchase.originalTransactionIdentifierIOS,
         );
-        console.log('  currentTransactionId:', purchase.id);
-        console.log('  transactionReason:', iosPurchase.transactionReasonIOS);
+        ExpoIapConsole.log('  currentTransactionId:', purchase.id);
+        ExpoIapConsole.log(
+          '  transactionReason:',
+          iosPurchase.transactionReasonIOS,
+        );
       } else if (Platform.OS === 'android' && purchasePlatform === 'android') {
         isPurchased = true;
         isRestoration = false;
 
-        console.log('Android Purchase Analysis:');
-        console.log('  isPurchased:', isPurchased);
-        console.log('  isRestoration:', isRestoration);
+        ExpoIapConsole.log('Android Purchase Analysis:');
+        ExpoIapConsole.log('  isPurchased:', isPurchased);
+        ExpoIapConsole.log('  isRestoration:', isRestoration);
       }
 
       if (!isPurchased) {
-        console.warn(
+        ExpoIapConsole.warn(
           'Purchase callback received but purchase validation failed',
         );
         setPurchaseResult('Purchase validation failed.');
@@ -722,16 +728,19 @@ function SubscriptionFlowContainer() {
             isConsumable: false,
           });
         } catch (error) {
-          console.warn('finishTransaction failed during restoration:', error);
+          ExpoIapConsole.warn(
+            'finishTransaction failed during restoration:',
+            error,
+          );
         }
 
-        console.log('✅ Subscription restoration completed');
+        ExpoIapConsole.log('✅ Subscription restoration completed');
 
         try {
           await getActiveSubscriptions();
           await getAvailablePurchases();
         } catch (error) {
-          console.warn('Failed to refresh status:', error);
+          ExpoIapConsole.warn('Failed to refresh status:', error);
         }
 
         resetHandlingState();
@@ -746,24 +755,24 @@ function SubscriptionFlowContainer() {
           isConsumable: false,
         });
       } catch (error) {
-        console.warn('finishTransaction failed (new purchase):', error);
+        ExpoIapConsole.warn('finishTransaction failed (new purchase):', error);
       }
 
       Alert.alert('Success', 'New subscription activated successfully!');
-      console.log('✅ New subscription purchase completed');
+      ExpoIapConsole.log('✅ New subscription purchase completed');
 
       try {
         await getActiveSubscriptions();
         await getAvailablePurchases();
       } catch (error) {
-        console.warn('Failed to refresh status:', error);
+        ExpoIapConsole.warn('Failed to refresh status:', error);
       }
 
       resetHandlingState();
       setIsProcessing(false);
     },
     onPurchaseError: (error: PurchaseError) => {
-      console.error('Subscription failed:', error);
+      ExpoIapConsole.error('Subscription failed:', error);
       setIsProcessing(false);
       resetHandlingState();
       setPurchaseResult(`Subscription failed: ${error.message}`);
@@ -775,14 +784,14 @@ function SubscriptionFlowContainer() {
       return;
     }
 
-    console.log('Checking subscription status...');
+    ExpoIapConsole.log('Checking subscription status...');
     isCheckingStatusRef.current = true;
     setIsCheckingStatus(true);
     try {
       getActiveSubscriptions();
     } catch (error) {
-      console.error('Error checking subscription status:', error);
-      console.warn(
+      ExpoIapConsole.error('Error checking subscription status:', error);
+      ExpoIapConsole.warn(
         'Subscription status check failed, but existing state preserved',
       );
     } finally {
@@ -796,13 +805,17 @@ function SubscriptionFlowContainer() {
 
     if (connected && !didFetchSubsRef.current) {
       didFetchSubsRef.current = true;
-      console.log('Connected to store, loading subscription products...');
+      ExpoIapConsole.log(
+        'Connected to store, loading subscription products...',
+      );
       fetchProducts({skus: subscriptionIds, type: 'subs'});
-      console.log('Product loading request sent - waiting for results...');
+      ExpoIapConsole.log(
+        'Product loading request sent - waiting for results...',
+      );
 
-      console.log('Loading available purchases...');
+      ExpoIapConsole.log('Loading available purchases...');
       getAvailablePurchases().catch((error) => {
-        console.warn('Failed to load available purchases:', error);
+        ExpoIapConsole.warn('Failed to load available purchases:', error);
       });
     } else if (!connected) {
       didFetchSubsRef.current = false;
@@ -816,7 +829,7 @@ function SubscriptionFlowContainer() {
   }, [connected, handleRefreshStatus]);
 
   useEffect(() => {
-    console.log(
+    ExpoIapConsole.log(
       '[STATE CHANGE] activeSubscriptions:',
       activeSubscriptions.length,
       'items:',
@@ -831,14 +844,14 @@ function SubscriptionFlowContainer() {
   }, [activeSubscriptions]);
 
   useEffect(() => {
-    console.log(
+    ExpoIapConsole.log(
       '[STATE CHANGE] subscriptions (products):',
       subscriptions.length,
       subscriptions.map((s) => ({id: s.id, title: s.title, type: s.type})),
     );
 
     if (subscriptions.length > 0) {
-      console.log(
+      ExpoIapConsole.log(
         'Full subscription details:',
         JSON.stringify(subscriptions, null, 2),
       );
@@ -883,7 +896,7 @@ function SubscriptionFlowContainer() {
           : [];
 
       if (typeof requestPurchase !== 'function') {
-        console.warn(
+        ExpoIapConsole.warn(
           '[SubscriptionFlow] requestPurchase missing (test/mock env)',
         );
         setIsProcessing(false);
@@ -915,11 +928,11 @@ function SubscriptionFlowContainer() {
   const handleManageSubscriptions = useCallback(async () => {
     try {
       if (Platform.OS === 'ios') {
-        console.log('Opening subscription management (iOS)...');
+        ExpoIapConsole.log('Opening subscription management (iOS)...');
         const openedNative = await showManageSubscriptionsIOS()
           .then(() => true)
           .catch((error) => {
-            console.warn(
+            ExpoIapConsole.warn(
               '[SubscriptionFlow] showManageSubscriptionsIOS failed, falling back to deep link',
               error,
             );
@@ -929,14 +942,16 @@ function SubscriptionFlowContainer() {
         if (!openedNative) {
           await deepLinkToSubscriptions({});
         }
-        console.log('Subscription management opened');
+        ExpoIapConsole.log('Subscription management opened');
 
-        console.log('Refreshing subscription status after management...');
+        ExpoIapConsole.log(
+          'Refreshing subscription status after management...',
+        );
         await handleRefreshStatus();
       } else {
         const sku = subscriptions[0]?.id ?? SUBSCRIPTION_PRODUCT_IDS[0];
         const packageName = 'dev.hyo.martie';
-        console.log('Opening subscription management (Android)...');
+        ExpoIapConsole.log('Opening subscription management (Android)...');
         await deepLinkToSubscriptions(
           sku
             ? {skuAndroid: sku, packageNameAndroid: packageName}
@@ -944,7 +959,7 @@ function SubscriptionFlowContainer() {
         );
       }
     } catch (error) {
-      console.error('Failed to open subscription management:', error);
+      ExpoIapConsole.error('Failed to open subscription management:', error);
       Alert.alert('Error', 'Failed to open subscription management');
     }
   }, [handleRefreshStatus, subscriptions]);

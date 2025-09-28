@@ -15,6 +15,7 @@ import {
   validateReceiptAndroid,
   deepLinkToSubscriptionsAndroid,
 } from './modules/android';
+import {ExpoIapConsole} from './utils/debug';
 
 // Types
 import type {
@@ -90,8 +91,8 @@ export type ProductTypeInput = ProductQueryType | 'inapp';
 
 const normalizeProductType = (type?: ProductTypeInput) => {
   if (type === 'inapp') {
-    console.warn(
-      "expo-iap: 'inapp' product type is deprecated and will be removed in v3.1.0. Use 'in-app' instead.",
+    ExpoIapConsole.warn(
+      "'inapp' product type is deprecated and will be removed in v3.1.0. Use 'in-app' instead.",
     );
   }
 
@@ -184,7 +185,7 @@ export const promotedProductListenerIOS = (
   listener: (product: Product) => void,
 ) => {
   if (Platform.OS !== 'ios') {
-    console.warn(
+    ExpoIapConsole.warn(
       'promotedProductListenerIOS: This listener is only available on iOS',
     );
     return {remove: () => {}};
@@ -206,7 +207,7 @@ export const endConnection: MutationField<'endConnection'> = async () =>
  * @param request.type - Product query type: 'in-app', 'subs', or 'all'
  */
 export const fetchProducts: QueryField<'fetchProducts'> = async (request) => {
-  console.log('fetchProducts called with:', request);
+  ExpoIapConsole.debug('fetchProducts called with:', request);
   const {skus, type} = request ?? {};
 
   if (!Array.isArray(skus) || skus.length === 0) {
@@ -629,3 +630,4 @@ export type {
   PurchaseError as ExpoPurchaseError,
   PurchaseErrorProps,
 } from './utils/errorMapping';
+export {ExpoIapConsole} from './utils/debug';

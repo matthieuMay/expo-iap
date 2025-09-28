@@ -1,6 +1,7 @@
 import {Platform} from 'react-native';
 import {getAvailablePurchases} from '../index';
 import type {ActiveSubscription} from '../types';
+import {ExpoIapConsole} from '../utils/debug';
 
 /**
  * Get all active subscriptions with detailed information
@@ -119,7 +120,7 @@ export const getActiveSubscriptions = async (
 
     return activeSubscriptions;
   } catch (error) {
-    console.error('Error getting active subscriptions:', error);
+    ExpoIapConsole.error('Error getting active subscriptions:', error);
     return [];
   }
 };

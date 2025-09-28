@@ -10,7 +10,12 @@ import {
   Platform,
   Modal,
 } from 'react-native';
-import {useIAP, getStorefront, deepLinkToSubscriptions} from '../../src';
+import {
+  useIAP,
+  getStorefront,
+  deepLinkToSubscriptions,
+  ExpoIapConsole,
+} from '../../src';
 import type {ActiveSubscription} from '../../src';
 import Loading from '../src/components/Loading';
 import {SUBSCRIPTION_PRODUCT_IDS} from '../src/utils/constants';
@@ -67,7 +72,10 @@ export default function AvailablePurchases() {
     onPurchaseSuccess: async (purchase) => {
       // Avoid logging sensitive token in console output
       const {purchaseToken: _omit, ...safePurchase} = purchase as any;
-      console.log('[AVAILABLE-PURCHASES] Purchase successful:', safePurchase);
+      ExpoIapConsole.log(
+        '[AVAILABLE-PURCHASES] Purchase successful:',
+        safePurchase,
+      );
 
       // Finish transaction like in subscription-flow
       await finishTransaction({
@@ -79,7 +87,7 @@ export default function AvailablePurchases() {
       checkSubscriptionStatus();
     },
     onPurchaseError: (error: PurchaseError) => {
-      console.error('[AVAILABLE-PURCHASES] Purchase failed:', error);
+      ExpoIapConsole.error('[AVAILABLE-PURCHASES] Purchase failed:', error);
       Alert.alert('Purchase Failed', error.message);
     },
   });
@@ -87,26 +95,26 @@ export default function AvailablePurchases() {
   // Check subscription status like subscription-flow does
   const checkSubscriptionStatus = useCallback(async () => {
     if (!connected || isCheckingStatus) {
-      console.log(
+      ExpoIapConsole.log(
         '[AVAILABLE-PURCHASES] Skipping subscription status check - not connected or already checking',
       );
       return;
     }
 
-    console.log('[AVAILABLE-PURCHASES] Checking subscription status...');
+    ExpoIapConsole.log('[AVAILABLE-PURCHASES] Checking subscription status...');
     setIsCheckingStatus(true);
     try {
       await getActiveSubscriptions();
-      console.log(
+      ExpoIapConsole.log(
         '[AVAILABLE-PURCHASES] Active subscriptions result (state):',
         activeSubscriptions,
       );
     } catch (error) {
-      console.error(
+      ExpoIapConsole.error(
         '[AVAILABLE-PURCHASES] Error checking subscription status:',
         error,
       );
-      console.warn(
+      ExpoIapConsole.warn(
         '[AVAILABLE-PURCHASES] Subscription status check failed, but existing state preserved',
       );
     } finally {
@@ -124,7 +132,7 @@ export default function AvailablePurchases() {
 
     setLoading(true);
     try {
-      console.log(
+      ExpoIapConsole.log(
         '[AVAILABLE-PURCHASES] Loading available purchases and active subscriptions...',
       );
 
@@ -132,11 +140,14 @@ export default function AvailablePurchases() {
       // getPurchaseHistories is deprecated on Android, so we use these instead
       await Promise.all([getAvailablePurchases(), getActiveSubscriptions()]);
 
-      console.log(
+      ExpoIapConsole.log(
         '[AVAILABLE-PURCHASES] Available purchases and active subscriptions loaded',
       );
     } catch (error) {
-      console.error('[AVAILABLE-PURCHASES] Error loading purchases:', error);
+      ExpoIapConsole.error(
+        '[AVAILABLE-PURCHASES] Error loading purchases:',
+        error,
+      );
       Alert.alert('Error', 'Failed to load purchase data');
     } finally {
       setLoading(false);
@@ -150,7 +161,7 @@ export default function AvailablePurchases() {
       setStorefront(code || '');
       Alert.alert('Storefront', code || '(empty)');
     } catch (e: any) {
-      console.warn('Failed to get storefront:', e?.message);
+      ExpoIapConsole.warn('Failed to get storefront:', e?.message);
       Alert.alert('Storefront', 'Failed to get storefront');
     }
   };
@@ -178,22 +189,22 @@ export default function AvailablePurchases() {
   // Load products and available purchases when connected - follow subscription-flow pattern
   useEffect(() => {
     if (connected) {
-      console.log(
+      ExpoIapConsole.log(
         '[AVAILABLE-PURCHASES] Connected to store, loading subscription products...',
       );
       // Request products first - this is event-based, not promise-based
       fetchProducts({skus: SUBSCRIPTION_PRODUCT_IDS, type: 'subs'});
-      console.log(
+      ExpoIapConsole.log(
         '[AVAILABLE-PURCHASES] Product loading request sent - waiting for results...',
       );
 
       // Then load available purchases and active subscriptions
-      console.log(
+      ExpoIapConsole.log(
         '[AVAILABLE-PURCHASES] Loading available purchases and active subscriptions...',
       );
       Promise.all([getAvailablePurchases(), getActiveSubscriptions()]).catch(
         (error) => {
-          console.warn(
+          ExpoIapConsole.warn(
             '[AVAILABLE-PURCHASES] Failed to load purchase data:',
             error,
           );
@@ -216,12 +227,12 @@ export default function AvailablePurchases() {
 
   // Track state changes for debugging
   useEffect(() => {
-    console.log(
+    ExpoIapConsole.log(
       '[AVAILABLE-PURCHASES] availablePurchases:',
       availablePurchases.length,
       'items (raw)',
     );
-    console.log(
+    ExpoIapConsole.log(
       '[AVAILABLE-PURCHASES] deduplicatedAvailablePurchases:',
       deduplicatedAvailablePurchases.length,
       'items (deduplicated)',
@@ -229,7 +240,7 @@ export default function AvailablePurchases() {
   }, [availablePurchases, deduplicatedAvailablePurchases]);
 
   useEffect(() => {
-    console.log(
+    ExpoIapConsole.log(
       '[AVAILABLE-PURCHASES] activeSubscriptions:',
       activeSubscriptions.length,
       activeSubscriptions,
@@ -237,7 +248,7 @@ export default function AvailablePurchases() {
   }, [activeSubscriptions]);
 
   useEffect(() => {
-    console.log(
+    ExpoIapConsole.log(
       '[AVAILABLE-PURCHASES] subscriptions (products):',
       subscriptions.length,
       subscriptions,

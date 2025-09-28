@@ -20,6 +20,7 @@ import {
   type ActiveSubscription,
   type ProductTypeInput,
 } from './index';
+import {ExpoIapConsole} from './utils/debug';
 import {
   getPromotedProductIOS,
   requestPurchaseOnPromotedProductIOS,
@@ -194,7 +195,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
         const result = await fetchProducts(request);
         const items = (result ?? []) as (Product | ProductSubscription)[];
 
-        console.log('Fetched products:', items);
+        ExpoIapConsole.debug('Fetched products:', items);
 
         if (queryType === 'subs') {
           const subscriptionsResult = items as ProductSubscription[];
@@ -267,7 +268,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
           );
         }
       } catch (error) {
-        console.error('Error fetching products:', error);
+        ExpoIapConsole.error('Error fetching products:', error);
       }
     },
     [canonicalProductType, mergeWithDuplicateCheck, normalizeProductQueryType],
@@ -281,7 +282,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
       });
       setAvailablePurchases(result);
     } catch (error) {
-      console.error('Error fetching available purchases:', error);
+      ExpoIapConsole.error('Error fetching available purchases:', error);
     }
   }, []);
 
@@ -291,7 +292,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
         const result = await getActiveSubscriptions(subscriptionIds);
         setActiveSubscriptions(result);
       } catch (error) {
-        console.error('Error getting active subscriptions:', error);
+        ExpoIapConsole.error('Error getting active subscriptions:', error);
         // Preserve existing state on error
       }
     },
@@ -303,7 +304,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
       try {
         return await hasActiveSubscriptions(subscriptionIds);
       } catch (error) {
-        console.error('Error checking active subscriptions:', error);
+        ExpoIapConsole.error('Error checking active subscriptions:', error);
         return false;
       }
     },
@@ -341,7 +342,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
           await getAvailablePurchasesInternal();
         }
       } catch (error) {
-        console.warn('Failed to refresh subscription status:', error);
+        ExpoIapConsole.warn('Failed to refresh subscription status:', error);
       }
     },
     [fetchProductsInternal, getAvailablePurchasesInternal],
@@ -363,7 +364,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
       });
       setAvailablePurchases(purchases);
     } catch (error) {
-      console.warn('Failed to restore purchases:', error);
+      ExpoIapConsole.warn('Failed to restore purchases:', error);
     }
   }, []);
 
@@ -395,7 +396,7 @@ export function useIAP(options?: UseIAPOptions): UseIap {
         }
         const friendly = getUserFriendlyErrorMessage(error);
         if (!isUserCancelledError(error) && !isRecoverableError(error)) {
-          console.warn('[useIAP] Purchase error:', friendly);
+          ExpoIapConsole.warn('[useIAP] Purchase error:', friendly);
         }
 
         if (optionsRef.current?.onPurchaseError) {
@@ -422,7 +423,9 @@ export function useIAP(options?: UseIAPOptions): UseIap {
     setConnected(result);
     if (!result) {
       // If connection failed, clean up listeners
-      console.warn('[useIAP] Connection failed, cleaning up listeners...');
+      ExpoIapConsole.warn(
+        '[useIAP] Connection failed, cleaning up listeners...',
+      );
       subscriptionsRef.current.purchaseUpdate?.remove();
       subscriptionsRef.current.promotedProductIOS?.remove();
       subscriptionsRef.current.purchaseUpdate = undefined;

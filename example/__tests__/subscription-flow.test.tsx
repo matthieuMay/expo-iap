@@ -60,6 +60,13 @@ jest.mock('../../src', () => ({
   initConnection: mockInitConnection,
   requestPurchase: mockRequestPurchase,
   useIAP: () => mockUseIAP(),
+  ExpoIapConsole: {
+    log: jest.fn(),
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
 }));
 
 describe('SubscriptionFlow Component', () => {
