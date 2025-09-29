@@ -109,7 +109,7 @@ function App() {
 
 The hook automatically handles connection initialization. Check the `connected` status before making IAP calls:
 
-```tsx
+````tsx
 const {connected, fetchProducts} = useIAP();
 
 useEffect(() => {
@@ -156,7 +156,7 @@ const handlePurchase = async (purchase) => {
     console.error('Purchase handling failed:', error);
   }
 };
-```
+````
 
 **Important - Transaction Acknowledgment Requirements**:
 
