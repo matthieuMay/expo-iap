@@ -377,14 +377,16 @@ const handleStoreUnavailable = () => {
 
 ### 1. Enable verbose logging
 
-```tsx
-import {setDebugMode} from 'expo-iap';
+To enable debug logging for expo-iap development, set the `EXPO_IAP_DEV_MODE` environment variable:
 
-// Enable debug mode in development
-if (__DEV__) {
-  setDebugMode(true);
-}
+```bash
+# Set environment variable when running your app
+EXPO_IAP_DEV_MODE=true npx expo run:ios
+# or
+EXPO_IAP_DEV_MODE=true npx expo run:android
 ```
+
+For VSCode users, this is already configured in `.vscode/launch.json` for all debug configurations.
 
 ### 2. Log purchase events
 
