@@ -84,51 +84,43 @@ For Android, your app must be uploaded to Play Console:
 
 ### `useIAP` hook not working
 
-#### 1. Missing provider setup
+#### 1. Direct usage without provider
 
-Ensure you're using the hook within the provider context:
+The `useIAP` hook in expo-iap works independently and doesn't require a provider:
 
 ```tsx
-// ❌ Wrong: Hook used outside provider
-function App() {
-  const {connected} = useIAP(); // This will fail
-  return <MyApp />;
-}
-
-// ✅ Correct: Hook used within provider
-import {IAPProvider} from 'expo-iap';
-
-function AppWithProvider() {
-  return (
-    <IAPProvider>
-      <App />
-    </IAPProvider>
-  );
-}
+// ✅ Correct: Hook works without any provider
+import {useIAP} from 'expo-iap';
 
 function App() {
-  const {connected} = useIAP(); // This works
+  const {connected, products, fetchProducts} = useIAP();
+
+  useEffect(() => {
+    if (connected) {
+      fetchProducts({skus: productIds, type: 'in-app'});
+    }
+  }, [connected]);
+
   return <MyApp />;
 }
 ```
 
-#### 2. Multiple providers
+#### 2. Connection status
 
-Don't wrap your app with multiple IAP providers:
+The hook automatically handles connection initialization. Check the `connected` status before making IAP calls:
 
 ```tsx
-// ❌ Wrong: Multiple providers
-<IAPProvider>
-  <IAPProvider>
-    <App />
-  </IAPProvider>
-</IAPProvider>
+const {connected, fetchProducts} = useIAP();
 
-// ✅ Correct: Single provider
-<IAPProvider>
-  <App />
-</IAPProvider>
-```
+useEffect(() => {
+  if (!connected) {
+    console.log('Waiting for IAP connection...');
+    return;
+  }
+
+  // Connection established, safe to fetch products
+  fetchProducts({skus: productIds});
+}, [connected]);
 
 ### Purchase flow issues
 
