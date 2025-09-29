@@ -23,9 +23,9 @@ import {useIAP} from 'expo-iap';
 The `useIAP` hook follows React Hooks conventions and differs from calling functions directly from `expo-iap` (index exports):
 
 - **Automatic connection**: Automatically calls `initConnection` on mount and `endConnection` on unmount.
-- **Void-returning methods**: Methods like `fetchProducts`, `requestPurchase`, `getAvailablePurchases`, etc. return `Promise<void>` in the hook. They do not resolve to data. Instead, they update internal state exposed by the hook: `products`, `subscriptions`, `availablePurchases`, `currentPurchase`, etc.
-- **Don’t await for data**: When using the hook, do not write `const x = await fetchProducts(...)`. Call the method, then read the corresponding state from the hook.
-- **Prefer callbacks over `currentPurchase`**: `currentPurchase` was historically useful for debugging and migration, but for new code you should rely on `onPurchaseSuccess` and `onPurchaseError` options passed to `useIAP`.
+- **Void-returning methods**: Methods like `fetchProducts`, `requestPurchase`, `getAvailablePurchases`, etc. return `Promise<void>` in the hook. They do not resolve to data. Instead, they update internal state exposed by the hook: `products`, `subscriptions`, `availablePurchases`, etc.
+- **Don't await for data**: When using the hook, do not write `const x = await fetchProducts(...)`. Call the method, then read the corresponding state from the hook.
+- **Use callbacks for purchases**: Always use `onPurchaseSuccess` and `onPurchaseError` callbacks passed to `useIAP` for handling purchase results. The `currentPurchase` and `currentPurchaseError` states are deprecated and should not be used in new code.
 
 ## Basic Usage
 
@@ -35,15 +35,17 @@ const {
   products,
   subscriptions,
   availablePurchases,
-  currentPurchase, // Debugging/migration friendly; prefer callbacks
-  currentPurchaseError, // Debugging/migration friendly; prefer callbacks
   fetchProducts,
   requestPurchase,
-  validateReceipt,
+  finishTransaction,
 } = useIAP({
-  onPurchaseSuccess: (purchase) => {
-    // Validate on your backend, then finish the transaction
-    console.log('Purchase successful:', purchase);
+  onPurchaseSuccess: async (purchase) => {
+    // IMPORTANT: Validate on your backend before finishing transaction
+    const isValid = await validateOnServer(purchase);
+
+    if (isValid) {
+      await finishTransaction({purchase, isConsumable: false});
+    }
   },
   onPurchaseError: (error) => {
     console.error('Purchase failed:', error);
@@ -144,32 +146,52 @@ interface UseIAPOptions {
   ));
   ```
 
-#### currentPurchase
+#### currentPurchase (Deprecated)
 
 - **Type**: `Purchase | null`
-- **Description**: Last purchase event captured by the hook. This value is primarily helpful for debugging and migration. For production flows, prefer handling purchase results via `onPurchaseSuccess` and errors via `onPurchaseError` passed to `useIAP`.
-- **Example (debug logging only)**:
+- **Status**: ⚠️ **DEPRECATED** - Do not use in new code
+- **Description**: Last purchase event captured by the hook. This state is deprecated and kept only for backward compatibility. **Always use `onPurchaseSuccess` callback instead.**
+- **Migration**:
 
   ```tsx
+  // ❌ Old way (deprecated)
+  const {currentPurchase} = useIAP();
   useEffect(() => {
     if (currentPurchase) {
-      console.log('Debug purchase event:', currentPurchase.id);
+      handlePurchase(currentPurchase);
     }
   }, [currentPurchase]);
+
+  // ✅ New way (recommended)
+  const {} = useIAP({
+    onPurchaseSuccess: async (purchase) => {
+      await handlePurchase(purchase);
+    },
+  });
   ```
 
-#### currentPurchaseError
+#### currentPurchaseError (Deprecated)
 
 - **Type**: `PurchaseError | null`
-- **Description**: Current purchase error (if any)
-- **Example**:
+- **Status**: ⚠️ **DEPRECATED** - Do not use in new code
+- **Description**: Current purchase error. This state is deprecated and kept only for backward compatibility. **Always use `onPurchaseError` callback instead.**
+- **Migration**:
 
   ```tsx
+  // ❌ Old way (deprecated)
+  const {currentPurchaseError} = useIAP();
   useEffect(() => {
     if (currentPurchaseError) {
-      handlePurchaseError(currentPurchaseError);
+      handleError(currentPurchaseError);
     }
   }, [currentPurchaseError]);
+
+  // ✅ New way (recommended)
+  const {} = useIAP({
+    onPurchaseError: (error) => {
+      handleError(error);
+    },
+  });
   ```
 
 #### availablePurchases
@@ -235,7 +257,7 @@ interface UseIAPOptions {
   ```tsx
   const buyProduct = async (productId: string) => {
     try {
-      // In hook: returns void. Listen via callbacks or `currentPurchase`.
+      // In hook: returns void. Listen via callbacks (onPurchaseSuccess/onPurchaseError)
       await requestPurchase({
         request: {
           ios: {sku: productId},

@@ -379,19 +379,14 @@ For simpler usage, consider using the `useIAP` hook which automatically manages 
 import {useIAP} from 'expo-iap';
 
 export default function StoreComponent() {
-  const {currentPurchase, currentPurchaseError} = useIAP();
-
-  useEffect(() => {
-    if (currentPurchase) {
-      handlePurchaseUpdate(currentPurchase);
-    }
-  }, [currentPurchase]);
-
-  useEffect(() => {
-    if (currentPurchaseError) {
-      handlePurchaseError(currentPurchaseError);
-    }
-  }, [currentPurchaseError]);
+  const {finishTransaction} = useIAP({
+    onPurchaseSuccess: async (purchase) => {
+      await handlePurchaseUpdate(purchase);
+    },
+    onPurchaseError: (error) => {
+      handlePurchaseError(error);
+    },
+  });
 
   // Rest of component
 }

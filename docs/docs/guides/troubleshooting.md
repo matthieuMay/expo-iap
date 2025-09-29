@@ -129,33 +129,30 @@ useEffect(() => {
 Always handle purchase updates and finish transactions:
 
 ```tsx
-const {currentPurchase, finishTransaction} = useIAP();
+const {finishTransaction} = useIAP({
+  onPurchaseSuccess: async (purchase) => {
+    try {
+      // Validate receipt on your server
+      const isValid = await validateOnServer(purchase);
 
-useEffect(() => {
-  if (currentPurchase) {
-    handlePurchase(currentPurchase);
-  }
-}, [currentPurchase]);
+      if (isValid) {
+        // Grant purchase to user
+        await grantPurchase(purchase);
 
-const handlePurchase = async (purchase) => {
-  try {
-    // Validate receipt
-    const isValid = await validateOnServer(purchase);
-
-    if (isValid) {
-      // Grant purchase to user
-      await grantPurchase(purchase);
-
-      // ✅ Always finish the transaction
-      await finishTransaction({
-        purchase,
-        isConsumable: false, // default is false
-      });
+        // ✅ Always finish the transaction
+        await finishTransaction({
+          purchase,
+          isConsumable: false, // default is false
+        });
+      }
+    } catch (error) {
+      console.error('Purchase handling failed:', error);
     }
-  } catch (error) {
-    console.error('Purchase handling failed:', error);
-  }
-};
+  },
+  onPurchaseError: (error) => {
+    console.error('Purchase failed:', error);
+  },
+});
 ````
 
 **Important - Transaction Acknowledgment Requirements**:
@@ -392,22 +389,14 @@ if (__DEV__) {
 ### 2. Log purchase events
 
 ```tsx
-const {currentPurchase, currentPurchaseError} = useIAP();
-
-useEffect(() => {
-  if (currentPurchase) {
-    console.log('Purchase received:', JSON.stringify(currentPurchase, null, 2));
-  }
-}, [currentPurchase]);
-
-useEffect(() => {
-  if (currentPurchaseError) {
-    console.error(
-      'Purchase error:',
-      JSON.stringify(currentPurchaseError, null, 2),
-    );
-  }
-}, [currentPurchaseError]);
+const {} = useIAP({
+  onPurchaseSuccess: (purchase) => {
+    console.log('Purchase received:', JSON.stringify(purchase, null, 2));
+  },
+  onPurchaseError: (error) => {
+    console.error('Purchase error:', JSON.stringify(error, null, 2));
+  },
+});
 ```
 
 ### 3. Monitor connection state

@@ -51,9 +51,22 @@ function MyStore() {
     products,
     fetchProducts,
     requestPurchase,
-    currentPurchase,
     finishTransaction,
-  } = useIAP();
+  } = useIAP({
+    onPurchaseSuccess: async (purchase) => {
+      console.log('Purchase successful:', purchase);
+
+      // IMPORTANT: Verify receipt on your backend before finishing transaction
+      const isValid = await verifyReceiptOnServer(purchase);
+
+      if (isValid) {
+        await finishTransaction({purchase, isConsumable: true});
+      }
+    },
+    onPurchaseError: (error) => {
+      console.error('Purchase failed:', error);
+    },
+  });
 
   const productIds = ['your.product.id', 'your.premium.subscription'];
 }
@@ -119,29 +132,39 @@ const handlePurchase = async (productId: string) => {
 
 ### 5. Complete Transactions
 
-Finish purchases when they complete:
+Finish purchases in the success callback:
 
 ```tsx
-useEffect(() => {
-  if (currentPurchase) {
-    const completePurchase = async () => {
+const {connected, products, fetchProducts, requestPurchase, finishTransaction} =
+  useIAP({
+    onPurchaseSuccess: async (purchase) => {
       try {
+        console.log('Purchase completed:', purchase.id);
+
+        // IMPORTANT: Verify receipt on your backend before finishing transaction
+        const isValid = await verifyReceiptOnServer(purchase);
+
+        if (!isValid) {
+          console.error('Receipt validation failed');
+          return;
+        }
+
         // Grant the purchase to user here
-        console.log('Purchase completed:', currentPurchase.id);
+        await grantPurchaseToUser(purchase);
 
         // Finish the transaction
         await finishTransaction({
-          purchase: currentPurchase,
+          purchase,
           isConsumable: true, // Set based on your product type
         });
       } catch (error) {
         console.error('Failed to complete purchase:', error);
       }
-    };
-
-    completePurchase();
-  }
-}, [currentPurchase]);
+    },
+    onPurchaseError: (error) => {
+      console.error('Purchase failed:', error);
+    },
+  });
 ```
 
 ### Complete Basic Example
@@ -159,9 +182,36 @@ export default function SimpleStore() {
     products,
     fetchProducts,
     requestPurchase,
-    currentPurchase,
     finishTransaction,
-  } = useIAP();
+  } = useIAP({
+    onPurchaseSuccess: async (purchase) => {
+      try {
+        console.log('Purchase completed:', purchase.id);
+
+        // IMPORTANT: Verify receipt on your backend before finishing transaction
+        const isValid = await verifyReceiptOnServer(purchase);
+
+        if (!isValid) {
+          console.error('Receipt validation failed');
+          return;
+        }
+
+        // Grant purchase to user
+        await grantPurchaseToUser(purchase);
+
+        // Finish the transaction
+        await finishTransaction({
+          purchase,
+          isConsumable: true,
+        });
+      } catch (error) {
+        console.error('Failed to complete purchase:', error);
+      }
+    },
+    onPurchaseError: (error) => {
+      console.error('Purchase failed:', error);
+    },
+  });
 
   const productIds = ['com.example.coins.pack1', 'com.example.premium'];
 
@@ -170,23 +220,6 @@ export default function SimpleStore() {
       fetchProducts({skus: productIds, type: 'in-app'});
     }
   }, [connected]);
-
-  useEffect(() => {
-    if (currentPurchase) {
-      const completePurchase = async () => {
-        try {
-          console.log('Purchase completed:', currentPurchase.id);
-          await finishTransaction({
-            purchase: currentPurchase,
-            isConsumable: true,
-          });
-        } catch (error) {
-          console.error('Failed to complete purchase:', error);
-        }
-      };
-      completePurchase();
-    }
-  }, [currentPurchase]);
 
   const handlePurchase = async (productId: string) => {
     try {

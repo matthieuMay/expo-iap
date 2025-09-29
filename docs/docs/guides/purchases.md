@@ -158,20 +158,80 @@ const bulbPackSkus = ['dev.hyo.martie.10bulbs', 'dev.hyo.martie.30bulbs'];
 const subscriptionSkus = ['dev.hyo.martie.premium'];
 
 export default function PurchaseScreen() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+
+  const handlePurchaseUpdate = async (purchase: any) => {
+    try {
+      setIsLoading(true);
+      console.log('Processing purchase:', purchase);
+
+      const productId = purchase.id;
+
+      // IMPORTANT: Validate receipt on your server before finishing transaction
+      // This is crucial for security and fraud prevention
+      const validationResult = await handleValidateReceipt(productId, purchase);
+
+      if (validationResult.isValid) {
+        // Determine if this is a consumable product
+        const isConsumable = bulbPackSkus.includes(productId);
+
+        // Finish the transaction
+        await finishTransaction({
+          purchase,
+          isConsumable, // Set to true for consumable products
+        });
+
+        // Record purchase in your database
+        await recordPurchaseInDatabase(purchase, productId);
+
+        // Update local state (e.g., add bulbs, enable premium features)
+        await updateLocalState(productId);
+
+        // Show success message
+        showSuccessMessage(productId);
+      } else {
+        Alert.alert(
+          'Validation Error',
+          'Purchase could not be validated. Please contact support.',
+        );
+      }
+    } catch (error) {
+      console.error('Error handling purchase:', error);
+      Alert.alert('Error', 'Failed to process purchase.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const {
     connected,
     products,
     subscriptions,
-    currentPurchase,
-    currentPurchaseError,
     fetchProducts,
     requestPurchase,
     finishTransaction,
     validateReceipt,
-  } = useIAP();
+  } = useIAP({
+    onPurchaseSuccess: async (purchase) => {
+      console.log('Purchase successful:', purchase);
+      await handlePurchaseUpdate(purchase);
+    },
+    onPurchaseError: (error) => {
+      setIsLoading(false);
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [isReady, setIsReady] = useState(false);
+      // Don't show error for user cancellation
+      if (error.code === 'E_USER_CANCELLED') {
+        return;
+      }
+
+      Alert.alert(
+        'Purchase Error',
+        'Failed to complete purchase. Please try again.',
+      );
+      console.error('Purchase error:', error);
+    },
+  });
 
   // Initialize products when IAP connection is established
   useEffect(() => {
@@ -217,73 +277,6 @@ export default function PurchaseScreen() {
     },
     [validateReceipt],
   );
-
-  // Handle successful purchases
-  useEffect(() => {
-    if (currentPurchase) {
-      handlePurchaseUpdate(currentPurchase);
-    }
-  }, [currentPurchase]);
-
-  // Handle purchase errors
-  useEffect(() => {
-    if (currentPurchaseError) {
-      setIsLoading(false);
-
-      // Don't show error for user cancellation
-      if (currentPurchaseError.code === 'E_USER_CANCELLED') {
-        return;
-      }
-
-      Alert.alert(
-        'Purchase Error',
-        'Failed to complete purchase. Please try again.',
-      );
-      console.error('Purchase error:', currentPurchaseError);
-    }
-  }, [currentPurchaseError]);
-
-  const handlePurchaseUpdate = async (purchase: any) => {
-    try {
-      setIsLoading(true);
-      console.log('Processing purchase:', purchase);
-
-      const productId = purchase.id;
-
-      // Validate receipt on your server
-      const validationResult = await handleValidateReceipt(productId, purchase);
-
-      if (validationResult.isValid) {
-        // Determine if this is a consumable product
-        const isConsumable = bulbPackSkus.includes(productId);
-
-        // Finish the transaction
-        await finishTransaction({
-          purchase,
-          isConsumable, // Set to true for consumable products
-        });
-
-        // Record purchase in your database
-        await recordPurchaseInDatabase(purchase, productId);
-
-        // Update local state (e.g., add bulbs, enable premium features)
-        await updateLocalState(productId);
-
-        // Show success message
-        showSuccessMessage(productId);
-      } else {
-        Alert.alert(
-          'Validation Error',
-          'Purchase could not be validated. Please contact support.',
-        );
-      }
-    } catch (error) {
-      console.error('Error handling purchase:', error);
-      Alert.alert('Error', 'Failed to process purchase.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Request purchase for products
   const handlePurchaseBulbs = async (productId: string) => {
@@ -573,39 +566,40 @@ On iOS, if you don't call `finishTransaction` after a successful purchase, the t
 **Solution**: Always finish transactions after processing:
 
 ```tsx
-const {finishTransaction, validateReceipt} = useIAP({
+const {finishTransaction} = useIAP({
   onPurchaseSuccess: async (purchase) => {
     try {
-      // 1. Validate the receipt (IMPORTANT: Server-side validation required for both platforms)
+      // 1. IMPORTANT: Validate receipt on your server before finishing transaction
+      // This is crucial for security and fraud prevention
+      let isValid = false;
+
       if (Platform.OS === 'ios') {
-        const receiptData = await validateReceipt();
-        // Send to your server for validation with Apple
-        const isValid = await validateReceiptOnServer(receiptData);
-        if (!isValid) {
-          console.error('Invalid receipt');
-          return;
-        }
+        // Send purchase info to your server for validation with Apple
+        isValid = await validateReceiptOnServer({
+          transactionId: purchase.transactionId,
+          productId: purchase.productId,
+        });
       } else if (Platform.OS === 'android') {
-        // Android also requires server-side validation
+        // Send purchase info to your server for validation with Google
         const purchaseToken = purchase.purchaseTokenAndroid;
         const packageName = purchase.packageNameAndroid;
 
         // Your server should:
         // 1. Get Google Play service account credentials
         // 2. Use Google Play Developer API to verify the purchase
-        const isValid = await validateAndroidPurchaseOnServer({
+        isValid = await validateAndroidPurchaseOnServer({
           purchaseToken,
           packageName,
           productId: purchase.productId,
         });
-
-        if (!isValid) {
-          console.error('Invalid Android purchase');
-          return;
-        }
       }
 
-      // 2. Process the purchase
+      if (!isValid) {
+        console.error('Invalid receipt - purchase validation failed');
+        return;
+      }
+
+      // 2. Process the purchase (grant items, unlock features, etc.)
       await processPurchase(purchase);
 
       // 3. IMPORTANT: Finish the transaction
@@ -616,6 +610,9 @@ const {finishTransaction, validateReceipt} = useIAP({
     } catch (error) {
       console.error('Purchase processing failed:', error);
     }
+  },
+  onPurchaseError: (error) => {
+    console.error('Purchase failed:', error);
   },
 });
 ```
@@ -889,12 +886,18 @@ const restorePurchases = async () => {
 Some purchases may be in a pending state (e.g., awaiting parental approval):
 
 ```tsx
-useEffect(() => {
-  if (currentPurchase?.purchaseState === 'pending') {
-    // Inform user that purchase is pending
-    showPendingPurchaseMessage();
-  }
-}, [currentPurchase]);
+const {requestPurchase} = useIAP({
+  onPurchaseSuccess: async (purchase) => {
+    if (purchase.purchaseState === 'pending') {
+      // Inform user that purchase is pending
+      showPendingPurchaseMessage();
+      return;
+    }
+
+    // Process normal purchase
+    await processPurchase(purchase);
+  },
+});
 ```
 
 ### Subscription Management
