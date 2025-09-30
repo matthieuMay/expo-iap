@@ -156,6 +156,98 @@ public struct LoadingStates {
 - Use `status.loadings.purchasing.contains(productId)` to check if a specific product is being purchased
 - Use `status.isLoading` computed property to check if any operation is in progress
 
+### Error Handling
+
+#### Error Code Format
+
+All error codes in expo-iap follow the OpenIAP specification and use **kebab-case** format:
+
+```typescript
+export enum ErrorCode {
+  UserCancelled = 'user-cancelled', // NOT 'E_USER_CANCELLED'
+  NetworkError = 'network-error',
+  ItemUnavailable = 'item-unavailable',
+  AlreadyOwned = 'already-owned',
+  // ...
+}
+```
+
+**Important**:
+
+- ✅ Use `ErrorCode.UserCancelled` enum in TypeScript code
+- ✅ Error codes are kebab-case strings: `'user-cancelled'`
+- ❌ Never use deprecated `E_` prefix: `'E_USER_CANCELLED'`
+- ❌ Never use UPPERCASE format: `'USER_CANCELLED'`
+
+#### Error Object Structure
+
+All errors returned from native modules have the following structure:
+
+```typescript
+interface PurchaseError {
+  code: ErrorCode; // Standardized error code enum
+  message: string; // Human-readable error message
+  responseCode?: number; // Platform-specific response code
+  debugMessage?: string; // Additional debug information
+  productId?: string; // Product ID if applicable
+}
+```
+
+Example error object:
+
+```json
+{
+  "code": "user-cancelled",
+  "message": "User cancelled the purchase",
+  "responseCode": 1,
+  "debugMessage": "User pressed cancel button",
+  "productId": "com.example.premium"
+}
+```
+
+#### Using Error Codes
+
+Always use the `ErrorCode` enum for type-safe error handling:
+
+```typescript
+import {useIAP, ErrorCode} from 'expo-iap';
+
+const {requestPurchase} = useIAP({
+  onPurchaseError: (error) => {
+    // ✅ Correct - use ErrorCode enum
+    if (error.code === ErrorCode.UserCancelled) {
+      console.log('User cancelled');
+      return;
+    }
+
+    // ❌ Wrong - don't use string literals
+    if (error.code === 'E_USER_CANCELLED') {
+      /* ... */
+    }
+    if (error.code === 'USER_CANCELLED') {
+      /* ... */
+    }
+
+    // ✅ Correct - use switch with enum
+    switch (error.code) {
+      case ErrorCode.NetworkError:
+        showRetryDialog();
+        break;
+      case ErrorCode.ItemUnavailable:
+        showUnavailableMessage();
+        break;
+      default:
+        console.error(error.message);
+    }
+  },
+});
+```
+
+For complete error handling documentation, see:
+
+- [Error Codes Reference](https://www.openiap.dev/docs/errors)
+- [Error Handling Guide](https://docs.expo-iap.dev/docs/guides/error-handling)
+
 ## Documentation Guidelines
 
 ### Blog Post Conventions

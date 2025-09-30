@@ -227,29 +227,29 @@ Handle different error types appropriately:
 ```tsx
 const handlePurchaseError = (error) => {
   switch (error.code) {
-    case 'E_USER_CANCELLED':
+    case ErrorCode.UserCancelled:
       // User cancelled - no action needed
       break;
 
-    case 'E_NETWORK_ERROR':
+    case ErrorCode.NetworkError:
       // Show retry option
       showRetryDialog();
       break;
 
-    case 'E_ITEM_UNAVAILABLE':
+    case ErrorCode.ItemUnavailable:
       // Product not available
       showProductUnavailableMessage();
       break;
 
-    case 'E_ALREADY_OWNED':
+    case ErrorCode.AlreadyOwned:
       // User already owns this
       showAlreadyOwnedMessage();
       break;
 
     default:
       // Log for investigation
-      console.error('Purchase error:', error);**
-**      break;
+      console.error('Purchase error:', error);
+      break;
   }
 };
 ```
@@ -261,6 +261,8 @@ This can briefly happen due to StoreKit 2 event ordering and native background w
 Tip (dedupe in app logic):
 
 ```tsx
+import {useIAP, ErrorCode} from 'expo-iap';
+
 const lastSuccessAtRef = useRef(0);
 
 const {finishTransaction} = useIAP({
@@ -269,8 +271,8 @@ const {finishTransaction} = useIAP({
     await finishTransaction({purchase, isConsumable: false});
   },
   onPurchaseError: (error) => {
-    if (error.code === 'E_USER_CANCELLED') return;
-    if (error.code === 'E_SERVICE_ERROR') {
+    if (error.code === ErrorCode.UserCancelled) return;
+    if (error.code === ErrorCode.ServiceError) {
       const dt = Date.now() - lastSuccessAtRef.current;
       if (dt >= 0 && dt < 1500) return; // Ignore spurious error
     }

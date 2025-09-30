@@ -354,13 +354,13 @@ const handlePurchase = async (purchase) => {
 // Correct - handle different error types appropriately
 const handlePurchaseError = (error) => {
   switch (error.code) {
-    case 'E_USER_CANCELLED':
+    case ErrorCode.UserCancelled:
       // Silent - user intentionally cancelled
       break;
-    case 'E_NETWORK_ERROR':
+    case ErrorCode.NetworkError:
       showRetryDialog();
       break;
-    case 'E_ITEM_UNAVAILABLE':
+    case ErrorCode.ItemUnavailable:
       showUnavailableMessage();
       break;
     default:

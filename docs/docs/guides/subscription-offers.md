@@ -255,10 +255,12 @@ const purchaseWithSelectedOffer = async (
 ### Android Errors
 
 ```tsx
+import {useIAP, ErrorCode} from 'expo-iap';
+
 const {requestPurchase} = useIAP({
   onPurchaseError: (error) => {
-    if (error.message.includes('offerTokens')) {
-      console.error('Missing subscription offers for Android purchase');
+    if (error.code === ErrorCode.PurchaseError) {
+      console.error('Purchase failed - check subscription offers');
       // Ensure subscriptionOffers is included and valid
     }
   },
@@ -268,9 +270,11 @@ const {requestPurchase} = useIAP({
 ### iOS Errors
 
 ```tsx
+import {useIAP, ErrorCode} from 'expo-iap';
+
 const {requestPurchase} = useIAP({
   onPurchaseError: (error) => {
-    if (error.code === 'INVALID_OFFER') {
+    if (error.code === ErrorCode.Unknown) {
       console.error('Invalid promotional offer for iOS');
       // Check offerIdentifier, signature, etc.
     }

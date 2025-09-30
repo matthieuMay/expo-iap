@@ -34,12 +34,12 @@ The `ErrorCode` enum now mirrors the OpenIAP schema without the legacy `E_` pref
 
 ```ts
 export enum ErrorCode {
-  ActivityUnavailable = 'ACTIVITY_UNAVAILABLE',
-  AlreadyOwned = 'ALREADY_OWNED',
+  ActivityUnavailable = 'activity-unavailable',
+  AlreadyOwned = 'already-owned',
   ...
-  Unknown = 'UNKNOWN',
-  UserCancelled = 'USER_CANCELLED',
-  UserError = 'USER_ERROR',
+  Unknown = 'unknown',
+  UserCancelled = 'user-cancelled',
+  UserError = 'user-error',
 }
 ```
 

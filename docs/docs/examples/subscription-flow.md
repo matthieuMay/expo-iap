@@ -111,6 +111,8 @@ function SubscriptionPurchase() {
 Use `onPurchaseSuccess` and `onPurchaseError` callbacks from `useIAP`:
 
 ```tsx
+import {useIAP, ErrorCode} from 'expo-iap';
+
 function SubscriptionManager() {
   const [activeSubscription, setActiveSubscription] = useState(null);
 
@@ -133,7 +135,7 @@ function SubscriptionManager() {
         }
       },
       onPurchaseError: (error) => {
-        if (error.code !== 'E_USER_CANCELLED') {
+        if (error.code !== ErrorCode.UserCancelled) {
           Alert.alert('Error', error.message);
         }
       },

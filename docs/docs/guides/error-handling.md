@@ -24,14 +24,14 @@ interface IapError {
 Handle network connectivity issues gracefully:
 
 ```typescript
-import {useIAP} from 'expo-iap';
+import {useIAP, ErrorCode} from 'expo-iap';
 
 const {purchaseProduct} = useIAP();
 
 try {
   await purchaseProduct('product_id');
 } catch (error) {
-  if (error.code === 'E_NETWORK_ERROR') {
+  if (error.code === ErrorCode.NetworkError) {
     // Handle network issues
     showRetryDialog();
   }
@@ -43,10 +43,12 @@ try {
 Gracefully handle when users cancel purchases:
 
 ```typescript
+import {ErrorCode} from 'expo-iap';
+
 try {
   await purchaseProduct('product_id');
 } catch (error) {
-  if (error.code === 'E_USER_CANCELLED') {
+  if (error.code === ErrorCode.UserCancelled) {
     // User cancelled the purchase
     // Don't show error message, just continue
     return;
@@ -59,20 +61,19 @@ try {
 Handle various payment-related errors:
 
 ```typescript
+import {ErrorCode} from 'expo-iap';
+
 try {
   await purchaseProduct('product_id');
 } catch (error) {
   switch (error.code) {
-    case 'E_PAYMENT_INVALID':
+    case ErrorCode.UserError:
       showMessage(
         'Invalid payment method. Please check your payment settings.',
       );
       break;
-    case 'E_PAYMENT_NOT_ALLOWED':
+    case ErrorCode.IapNotAvailable:
       showMessage('Payments are not allowed on this device.');
-      break;
-    case 'E_INSUFFICIENT_FUNDS':
-      showMessage('Insufficient funds. Please add payment method.');
       break;
     default:
       showMessage('Purchase failed. Please try again.');
@@ -87,6 +88,8 @@ try {
 Implement exponential backoff for transient errors:
 
 ```typescript
+import {ErrorCode} from 'expo-iap';
+
 const retryWithBackoff = async (fn: () => Promise<any>, maxRetries = 3) => {
   for (let i = 0; i < maxRetries; i++) {
     try {
@@ -95,7 +98,9 @@ const retryWithBackoff = async (fn: () => Promise<any>, maxRetries = 3) => {
       if (i === maxRetries - 1) throw error;
 
       // Only retry on network or temporary errors
-      if (['E_NETWORK_ERROR', 'E_SERVICE_UNAVAILABLE'].includes(error.code)) {
+      if (
+        [ErrorCode.NetworkError, ErrorCode.ServiceError].includes(error.code)
+      ) {
         await new Promise((resolve) =>
           setTimeout(resolve, Math.pow(2, i) * 1000),
         );
@@ -112,11 +117,13 @@ const retryWithBackoff = async (fn: () => Promise<any>, maxRetries = 3) => {
 Provide fallback experiences:
 
 ```typescript
+import {ErrorCode} from 'expo-iap';
+
 const handlePurchase = async (productId: string) => {
   try {
     await purchaseProduct(productId);
   } catch (error) {
-    if (error.code === 'E_IAP_NOT_AVAILABLE') {
+    if (error.code === ErrorCode.IapNotAvailable) {
       // Redirect to web subscription
       redirectToWebPurchase(productId);
     } else {
@@ -167,13 +174,15 @@ try {
 Convert technical errors to user-friendly messages:
 
 ```typescript
+import {ErrorCode} from 'expo-iap';
+
 const getUserFriendlyMessage = (error: IapError): string => {
   switch (error.code) {
-    case 'E_USER_CANCELLED':
+    case ErrorCode.UserCancelled:
       return null; // Don't show message
-    case 'E_NETWORK_ERROR':
+    case ErrorCode.NetworkError:
       return 'Please check your internet connection and try again.';
-    case 'E_PAYMENT_INVALID':
+    case ErrorCode.UserError:
       return 'There was an issue with your payment method.';
     default:
       return 'Something went wrong. Please try again later.';
@@ -186,13 +195,15 @@ const getUserFriendlyMessage = (error: IapError): string => {
 Some errors may be platform-specific:
 
 ```typescript
+import {ErrorCode} from 'expo-iap';
+
 const handlePlatformSpecificError = (error: IapError) => {
-  if (
-    Platform.OS === 'ios' &&
-    error.code === 'E_STOREFRONT_COUNTRY_NOT_SUPPORTED'
-  ) {
+  if (Platform.OS === 'ios' && error.code === ErrorCode.ItemUnavailable) {
     showMessage('This product is not available in your country.');
-  } else if (Platform.OS === 'android' && error.code === 'E_DEVELOPER_ERROR') {
+  } else if (
+    Platform.OS === 'android' &&
+    error.code === ErrorCode.DeveloperError
+  ) {
     // Log for debugging but don't show to user
     console.error('Google Play configuration error:', error);
   }

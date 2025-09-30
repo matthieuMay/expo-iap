@@ -151,7 +151,7 @@ For a more modern approach using React hooks, here's a comprehensive implementat
 ```tsx
 import React, {useEffect, useState, useCallback} from 'react';
 import {Platform, Alert, InteractionManager} from 'react-native';
-import {useIAP} from 'expo-iap';
+import {useIAP, ErrorCode} from 'expo-iap';
 
 // Define your product SKUs
 const bulbPackSkus = ['dev.hyo.martie.10bulbs', 'dev.hyo.martie.30bulbs'];
@@ -221,7 +221,7 @@ export default function PurchaseScreen() {
       setIsLoading(false);
 
       // Don't show error for user cancellation
-      if (error.code === 'E_USER_CANCELLED') {
+      if (error.code === ErrorCode.UserCancelled) {
         return;
       }
 
@@ -1045,21 +1045,21 @@ Implement comprehensive error handling for various scenarios:
 ```tsx
 const handlePurchaseError = (error) => {
   switch (error.code) {
-    case 'E_USER_CANCELLED':
+    case ErrorCode.UserCancelled:
       // User cancelled - no action needed
       break;
 
-    case 'E_NETWORK_ERROR':
+    case ErrorCode.NetworkError:
       // Show retry option
       showRetryDialog();
       break;
 
-    case 'E_ITEM_UNAVAILABLE':
+    case ErrorCode.ItemUnavailable:
       // Product not available
       showProductUnavailableMessage();
       break;
 
-    case 'E_ALREADY_OWNED':
+    case ErrorCode.AlreadyOwned:
       // User already owns this product
       showAlreadyOwnedMessage();
       break;

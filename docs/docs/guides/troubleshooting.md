@@ -448,12 +448,12 @@ Common error codes and their meanings:
 
 | Code | Description | Action |
 | --- | --- | --- |
-| `E_USER_CANCELLED` | User cancelled purchase | No action needed |
-| `E_NETWORK_ERROR` | Network connectivity issue | Show retry option |
-| `E_ITEM_UNAVAILABLE` | Product not available | Check product setup |
-| `E_ALREADY_OWNED` | User already owns product | Check ownership status |
-| `E_INSUFFICIENT_FUNDS` | Not enough funds | Direct to payment method |
-| `E_UNKNOWN` | Unknown error | Log for investigation |
+| `ErrorCode.UserCancelled` | User cancelled purchase | No action needed |
+| `ErrorCode.NetworkError` | Network connectivity issue | Show retry option |
+| `ErrorCode.ItemUnavailable` | Product not available | Check product setup |
+| `ErrorCode.AlreadyOwned` | User already owns product | Check ownership status |
+| `ErrorCode.UserError` | User error (e.g., insufficient funds) | Direct to payment method |
+| `ErrorCode.Unknown` | Unknown error | Log for investigation |
 
 ## Getting Help
 
