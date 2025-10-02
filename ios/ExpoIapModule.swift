@@ -13,7 +13,7 @@ public final class ExpoIapModule: Module {
     nonisolated public func definition() -> ModuleDefinition {
         Name("ExpoIap")
 
-        Constants {
+        Property("errorCodes") {
             OpenIapSerialization.errorCodes()
         }
 
