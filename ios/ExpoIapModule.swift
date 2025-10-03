@@ -35,7 +35,9 @@ public final class ExpoIapModule: Module {
             }
         }
 
-        AsyncFunction("initConnection") { () async throws -> Bool in
+        AsyncFunction("initConnection") { (config: [String: Any]?) async throws -> Bool in
+            // Note: iOS doesn't support alternative billing config parameter
+            // Config is ignored on iOS platform
             let isConnected = try await OpenIapModule.shared.initConnection()
             await MainActor.run { self.isInitialized = isConnected }
             return isConnected
@@ -59,8 +61,10 @@ public final class ExpoIapModule: Module {
 
         AsyncFunction("requestPurchase") { (payload: [String: Any]) async throws -> Any? in
             ExpoIapLog.payload("requestPurchase", payload: payload)
+            print("🔍 [ExpoIap] Raw payload useAlternativeBilling: \(payload["useAlternativeBilling"] ?? "nil")")
             try await ExpoIapHelper.ensureConnection(isInitialized: self.isInitialized)
             let props = try ExpoIapHelper.decodeRequestPurchaseProps(from: payload)
+            print("🔍 [ExpoIap] Decoded props useAlternativeBilling: \(props.useAlternativeBilling ?? false)")
 
             do {
                 guard let result = try await OpenIapModule.shared.requestPurchase(props) else {
@@ -333,6 +337,34 @@ public final class ExpoIapModule: Module {
                 ExpoIapLog.failure("latestTransactionIOS", error: error)
                 throw PurchaseError.make(code: .skuNotFound, productId: sku)
             }
+        }
+
+        // MARK: - External Purchase (iOS 16.0+)
+
+        AsyncFunction("canPresentExternalPurchaseNoticeIOS") { () async throws -> Bool in
+            ExpoIapLog.payload("canPresentExternalPurchaseNoticeIOS", payload: nil)
+            try await ExpoIapHelper.ensureConnection(isInitialized: self.isInitialized)
+            let canPresent = try await OpenIapModule.shared.canPresentExternalPurchaseNoticeIOS()
+            ExpoIapLog.result("canPresentExternalPurchaseNoticeIOS", value: canPresent)
+            return canPresent
+        }
+
+        AsyncFunction("presentExternalPurchaseNoticeSheetIOS") { () async throws -> [String: Any] in
+            ExpoIapLog.payload("presentExternalPurchaseNoticeSheetIOS", payload: nil)
+            try await ExpoIapHelper.ensureConnection(isInitialized: self.isInitialized)
+            let result = try await OpenIapModule.shared.presentExternalPurchaseNoticeSheetIOS()
+            let sanitized = ExpoIapHelper.sanitizeDictionary(OpenIapSerialization.encode(result))
+            ExpoIapLog.result("presentExternalPurchaseNoticeSheetIOS", value: sanitized)
+            return sanitized
+        }
+
+        AsyncFunction("presentExternalPurchaseLinkIOS") { (url: String) async throws -> [String: Any] in
+            ExpoIapLog.payload("presentExternalPurchaseLinkIOS", payload: ["url": url])
+            try await ExpoIapHelper.ensureConnection(isInitialized: self.isInitialized)
+            let result = try await OpenIapModule.shared.presentExternalPurchaseLinkIOS(url)
+            let sanitized = ExpoIapHelper.sanitizeDictionary(OpenIapSerialization.encode(result))
+            ExpoIapLog.result("presentExternalPurchaseLinkIOS", value: sanitized)
+            return sanitized
         }
     }
 }
