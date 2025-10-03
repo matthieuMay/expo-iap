@@ -482,6 +482,14 @@ interface Purchase {
 
 The following iOS‑only helpers expose StoreKit and App Store specific capabilities. Most day‑to‑day flows are covered by the cross‑platform Core Methods above; use these only when you need iOS features.
 
+**Alternative Billing (iOS 16.0+):**
+
+- `canPresentExternalPurchaseNoticeIOS()` — Check if notice sheet is available (iOS 18.2+)
+- `presentExternalPurchaseNoticeSheetIOS()` — Present external purchase notice (iOS 18.2+)
+- `presentExternalPurchaseLinkIOS()` — Open external purchase link (iOS 16.0+)
+
+**Transaction Management:**
+
 ### clearTransactionIOS()
 
 Clears all pending transactions from the iOS payment queue. Useful if your app previously crashed or missed finishing transactions.
@@ -723,7 +731,283 @@ interface AppTransaction {
 }
 ```
 
+### canPresentExternalPurchaseNoticeIOS()
+
+Check if the device can present an external purchase notice sheet. Requires iOS 18.2+.
+
+```ts
+import {canPresentExternalPurchaseNoticeIOS} from 'expo-iap';
+
+const canPresent = await canPresentExternalPurchaseNoticeIOS();
+if (canPresent) {
+  console.log('External purchase notice sheet is available');
+}
+```
+
+**Returns:** `Promise<boolean>`
+
+**Platform:** iOS 18.2+
+
+**Note:** This notice sheet must be presented before redirecting users to external purchase links on iOS 18.2+.
+
+### presentExternalPurchaseNoticeSheetIOS()
+
+Present an external purchase notice sheet to inform users about external purchases. This must be called before opening an external purchase link on iOS 18.2+.
+
+```ts
+import {presentExternalPurchaseNoticeSheetIOS} from 'expo-iap';
+
+const result = await presentExternalPurchaseNoticeSheetIOS();
+
+if (result.error) {
+  console.error('Failed to present notice:', result.error);
+} else if (result.result === 'continue') {
+  // User chose to continue to external purchase
+  console.log('User accepted external purchase notice');
+} else if (result.result === 'dismissed') {
+  // User dismissed the sheet
+  console.log('User dismissed notice');
+}
+```
+
+**Returns:** `Promise<ExternalPurchaseNoticeResultIOS>`
+
+```ts
+interface ExternalPurchaseNoticeResultIOS {
+  error: string | null;
+  result: 'continue' | 'dismissed';
+}
+```
+
+**Platform:** iOS 18.2+
+
+**See also:** [StoreKit External Purchase documentation](https://developer.apple.com/documentation/storekit/external-purchase)
+
+### presentExternalPurchaseLinkIOS()
+
+Open an external purchase link in Safari to redirect users to your website for purchase. Requires iOS 16.0+.
+
+```ts
+import {presentExternalPurchaseLinkIOS} from 'expo-iap';
+
+const result = await presentExternalPurchaseLinkIOS(
+  'https://your-site.com/checkout',
+);
+
+if (result.error) {
+  console.error('Failed to open link:', result.error);
+} else if (result.success) {
+  console.log('User redirected to external purchase website');
+}
+```
+
+**Parameters:**
+
+- `url` (string): The external purchase URL to open
+
+**Returns:** `Promise<ExternalPurchaseLinkResultIOS>`
+
+```ts
+interface ExternalPurchaseLinkResultIOS {
+  error: string | null;
+  success: boolean;
+}
+```
+
+**Platform:** iOS 16.0+
+
+**Requirements:**
+
+- Must configure `iosAlternativeBilling` in your Expo config plugin
+- Requires Apple approval and proper provisioning profile with external purchase entitlements
+- URLs must be configured in Info.plist via the config plugin
+
+**Example Config:**
+
+```ts
+// app.config.ts
+export default {
+  plugins: [
+    [
+      'expo-iap',
+      {
+        iosAlternativeBilling: {
+          countries: ['kr', 'nl'], // ISO 3166-1 alpha-2
+          links: {
+            kr: 'https://your-site.com/kr',
+            nl: 'https://your-site.com/nl',
+          },
+          enableExternalPurchaseLink: true,
+        },
+      },
+    ],
+  ],
+};
+```
+
+**See also:**
+
+- [StoreKit External Purchase documentation](https://developer.apple.com/documentation/storekit/external-purchase)
+- [Config Plugin Guide](/docs/guides/config-plugin)
+
 ### Android Specific
+
+**Alternative Billing:**
+
+- `checkAlternativeBillingAvailabilityAndroid()` — Check if alternative billing is available
+- `showAlternativeBillingDialogAndroid()` — Show required information dialog
+- `createAlternativeBillingTokenAndroid()` — Generate reporting token
+
+**Purchase Management:**
+
+### checkAlternativeBillingAvailabilityAndroid()
+
+Check if alternative billing is available for the current user. This must be called before showing the alternative billing dialog.
+
+```ts
+import {checkAlternativeBillingAvailabilityAndroid} from 'expo-iap';
+
+const isAvailable = await checkAlternativeBillingAvailabilityAndroid();
+if (isAvailable) {
+  console.log('Alternative billing is available');
+} else {
+  console.log('Alternative billing not available for this user');
+}
+```
+
+**Returns:** `Promise<boolean>`
+
+**Platform:** Android
+
+**Requirements:**
+
+- Must initialize connection with alternative billing mode
+- User must be eligible for alternative billing (determined by Google)
+
+**See also:** [Google Play Alternative Billing documentation](https://developer.android.com/google/play/billing/alternative)
+
+### showAlternativeBillingDialogAndroid()
+
+Show Google's required information dialog to inform users about alternative billing. This must be called after checking availability and before processing payment.
+
+```ts
+import {showAlternativeBillingDialogAndroid} from 'expo-iap';
+
+const userAccepted = await showAlternativeBillingDialogAndroid();
+if (userAccepted) {
+  console.log('User accepted alternative billing');
+  // Proceed with your payment flow
+} else {
+  console.log('User declined alternative billing');
+}
+```
+
+**Returns:** `Promise<boolean>`
+
+**Platform:** Android
+
+**Note:** This dialog is required by Google Play's alternative billing policy. You must show this before redirecting users to your payment system.
+
+### createAlternativeBillingTokenAndroid()
+
+Generate a reporting token after successfully processing payment through your payment system. This token must be reported to Google Play within 24 hours.
+
+```ts
+import {createAlternativeBillingTokenAndroid} from 'expo-iap';
+
+// After successfully processing payment in your system
+const token = await createAlternativeBillingTokenAndroid('com.example.product');
+
+if (token) {
+  console.log('Token created:', token);
+  // Send this token to your backend to report to Google
+  await reportTokenToGooglePlay(token);
+} else {
+  console.error('Failed to create token');
+}
+```
+
+**Parameters:**
+
+- `sku` (string, optional): The product SKU that was purchased
+
+**Returns:** `Promise<string | null>`
+
+**Platform:** Android
+
+**Important:**
+
+- Token must be reported to Google Play backend within 24 hours
+- Requires server-side integration with Google Play Developer API
+- Failure to report will result in refund and possible account suspension
+
+**Alternative Billing Configuration:**
+
+```ts
+import {initConnection, endConnection} from 'expo-iap';
+
+// Initialize with alternative billing mode
+await initConnection({
+  alternativeBillingModeAndroid: 'user-choice', // or 'alternative-only'
+});
+
+// To change mode, reinitialize
+await endConnection();
+await initConnection({
+  alternativeBillingModeAndroid: 'alternative-only',
+});
+```
+
+**Billing Modes:**
+
+- `user-choice` - Users choose between Google Play billing or your payment system
+- `alternative-only` - Only your payment system is available
+
+**Complete Flow Example:**
+
+```ts
+import {
+  checkAlternativeBillingAvailabilityAndroid,
+  showAlternativeBillingDialogAndroid,
+  createAlternativeBillingTokenAndroid,
+} from 'expo-iap';
+
+async function purchaseWithAlternativeBilling(productId: string) {
+  // Step 1: Check availability
+  const isAvailable = await checkAlternativeBillingAvailabilityAndroid();
+  if (!isAvailable) {
+    throw new Error('Alternative billing not available');
+  }
+
+  // Step 2: Show required dialog
+  const userAccepted = await showAlternativeBillingDialogAndroid();
+  if (!userAccepted) {
+    throw new Error('User declined alternative billing');
+  }
+
+  // Step 3: Process payment in your system
+  const paymentResult = await processPaymentInYourSystem(productId);
+  if (!paymentResult.success) {
+    throw new Error('Payment failed');
+  }
+
+  // Step 4: Create reporting token
+  const token = await createAlternativeBillingTokenAndroid(productId);
+  if (!token) {
+    throw new Error('Failed to create token');
+  }
+
+  // Step 5: Report to Google (must be done within 24 hours)
+  await reportToGooglePlayBackend(token, productId, paymentResult);
+
+  return {success: true, token};
+}
+```
+
+**See also:**
+
+- [Google Play Alternative Billing documentation](https://developer.android.com/google/play/billing/alternative)
+- [Alternative Billing Example](/docs/guides/alternative-billing)
 
 #### acknowledgePurchaseAndroid
 
