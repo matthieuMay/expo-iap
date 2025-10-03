@@ -137,6 +137,7 @@ object ExpoIapHelper {
         pendingEvents: ConcurrentLinkedQueue<Pair<String, Map<String, Any?>>>,
         eventPurchaseUpdated: String,
         eventPurchaseError: String,
+        eventUserChoiceBilling: String,
     ) {
         openIap.addPurchaseUpdateListener { p ->
             runCatching {
@@ -148,7 +149,25 @@ object ExpoIapHelper {
                     eventPurchaseUpdated,
                     p.toJson(),
                 )
-            }.onFailure { android.util.Log.e(TAG, "Failed to buffer/send PURCHASE_UPDATED", it) }
+            }.onFailure { error ->
+                android.util.Log.e(TAG, "Failed to buffer/send PURCHASE_UPDATED", error)
+                // Emit as purchase error so user knows something went wrong
+                val errorPayload =
+                    mapOf(
+                        "code" to "purchase-error",
+                        "message" to "Failed to process purchase update: ${error.message}",
+                    )
+                runCatching {
+                    emitOrQueue(
+                        module,
+                        scope,
+                        connectionReady,
+                        pendingEvents,
+                        eventPurchaseError,
+                        errorPayload,
+                    )
+                }.onFailure { android.util.Log.e(TAG, "Failed to send error event", it) }
+            }
         }
         openIap.addPurchaseErrorListener { e ->
             runCatching {
@@ -160,7 +179,55 @@ object ExpoIapHelper {
                     eventPurchaseError,
                     e.toJSON(),
                 )
-            }.onFailure { android.util.Log.e(TAG, "Failed to buffer/send PURCHASE_ERROR", it) }
+            }.onFailure { error ->
+                android.util.Log.e(TAG, "Failed to buffer/send PURCHASE_ERROR", error)
+                // Critical: if we can't emit the original error, at least try to emit a generic one
+                val fallbackPayload =
+                    mapOf(
+                        "code" to "unknown",
+                        "message" to "Failed to emit purchase error: ${error.message}",
+                    )
+                runCatching {
+                    emitOrQueue(
+                        module,
+                        scope,
+                        connectionReady,
+                        pendingEvents,
+                        eventPurchaseError,
+                        fallbackPayload,
+                    )
+                }.onFailure { android.util.Log.e(TAG, "Failed to send fallback error event", it) }
+            }
+        }
+        openIap.addUserChoiceBillingListener { details ->
+            runCatching {
+                emitOrQueue(
+                    module,
+                    scope,
+                    connectionReady,
+                    pendingEvents,
+                    eventUserChoiceBilling,
+                    details.toJson(),
+                )
+            }.onFailure { error ->
+                android.util.Log.e(TAG, "Failed to buffer/send USER_CHOICE_BILLING", error)
+                // Emit as purchase error so user knows something went wrong
+                val errorPayload =
+                    mapOf(
+                        "code" to "alternative-billing-not-available",
+                        "message" to "Failed to process user choice billing: ${error.message}",
+                    )
+                runCatching {
+                    emitOrQueue(
+                        module,
+                        scope,
+                        connectionReady,
+                        pendingEvents,
+                        eventPurchaseError,
+                        errorPayload,
+                    )
+                }.onFailure { android.util.Log.e(TAG, "Failed to send error event", it) }
+            }
         }
     }
 

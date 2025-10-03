@@ -37,6 +37,7 @@ class ExpoIapModule : Module() {
         const val TAG = "ExpoIapModule"
         private const val EVENT_PURCHASE_UPDATED = "purchase-updated"
         private const val EVENT_PURCHASE_ERROR = "purchase-error"
+        private const val EVENT_USER_CHOICE_BILLING = "user-choice-billing-android"
         private const val MAX_BUFFERED_EVENTS = 200
     }
 
@@ -61,7 +62,7 @@ class ExpoIapModule : Module() {
                 "ERROR_CODES" to OpenIapError.getAllErrorCodes(),
             )
 
-            Events(EVENT_PURCHASE_UPDATED, EVENT_PURCHASE_ERROR)
+            Events(EVENT_PURCHASE_UPDATED, EVENT_PURCHASE_ERROR, EVENT_USER_CHOICE_BILLING)
 
             AsyncFunction("initConnection") { config: Map<String, Any?>?, promise: Promise ->
                 ExpoIapLog.payload("initConnection", config)
@@ -90,6 +91,7 @@ class ExpoIapModule : Module() {
                                     pendingEvents,
                                     EVENT_PURCHASE_UPDATED,
                                     EVENT_PURCHASE_ERROR,
+                                    EVENT_USER_CHOICE_BILLING,
                                 )
                             }
 

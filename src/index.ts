@@ -37,6 +37,7 @@ import type {
   RequestSubscriptionPropsByPlatforms,
   RequestSubscriptionAndroidProps,
   RequestSubscriptionIosProps,
+  UserChoiceBillingDetails,
 } from './types';
 import {ErrorCode} from './types';
 import {createPurchaseError, type PurchaseError} from './utils/errorMapping';
@@ -57,12 +58,14 @@ export enum OpenIapEvent {
   PurchaseUpdated = 'purchase-updated',
   PurchaseError = 'purchase-error',
   PromotedProductIOS = 'promoted-product-ios',
+  UserChoiceBillingAndroid = 'user-choice-billing-android',
 }
 
 type ExpoIapEventPayloads = {
   [OpenIapEvent.PurchaseUpdated]: Purchase;
   [OpenIapEvent.PurchaseError]: PurchaseError;
   [OpenIapEvent.PromotedProductIOS]: Product;
+  [OpenIapEvent.UserChoiceBillingAndroid]: UserChoiceBillingDetails;
 };
 
 type ExpoIapEventListener<E extends OpenIapEvent> = (
@@ -191,6 +194,43 @@ export const promotedProductListenerIOS = (
     return {remove: () => {}};
   }
   return emitter.addListener(OpenIapEvent.PromotedProductIOS, listener);
+};
+
+/**
+ * Android-only listener for User Choice Billing events.
+ * This fires when a user selects alternative billing instead of Google Play billing
+ * in the User Choice Billing dialog (only in 'user-choice' mode).
+ *
+ * @param listener - Callback function that receives the external transaction token and product IDs
+ * @returns EventSubscription that can be used to unsubscribe
+ *
+ * @example
+ * ```typescript
+ * const subscription = userChoiceBillingListenerAndroid((details) => {
+ *   console.log('User selected alternative billing');
+ *   console.log('Token:', details.externalTransactionToken);
+ *   console.log('Products:', details.products);
+ *
+ *   // Process payment in your system, then report token to Google
+ *   await processPaymentAndReportToken(details);
+ * });
+ *
+ * // Later, clean up
+ * subscription.remove();
+ * ```
+ *
+ * @platform Android
+ */
+export const userChoiceBillingListenerAndroid = (
+  listener: (details: UserChoiceBillingDetails) => void,
+) => {
+  if (Platform.OS !== 'android') {
+    ExpoIapConsole.warn(
+      'userChoiceBillingListenerAndroid: This listener is only available on Android',
+    );
+    return {remove: () => {}};
+  }
+  return emitter.addListener(OpenIapEvent.UserChoiceBillingAndroid, listener);
 };
 
 export const initConnection: MutationField<'initConnection'> = async (config) =>
