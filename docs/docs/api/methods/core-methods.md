@@ -848,7 +848,7 @@ export default {
 **See also:**
 
 - [StoreKit External Purchase documentation](https://developer.apple.com/documentation/storekit/external-purchase)
-- [Config Plugin Guide](/docs/guides/config-plugin)
+- [Config Plugin Guide](/docs/guides/expo-plugin)
 
 ### Android Specific
 
