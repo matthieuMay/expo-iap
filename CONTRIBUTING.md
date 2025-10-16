@@ -216,7 +216,7 @@ For detailed code conventions, naming standards, and implementation guidelines, 
 
 ### Updating OpenIAP Types
 
-The generated TypeScript definitions in `src/types.ts` come from the [`openiap-gql`](https://github.com/hyodotdev/openiap-gql) release artifacts. Never edit this file by hand. When the schema changes or you need to pull newer types:
+The generated TypeScript definitions in `src/types.ts` come from the [OpenIAP](https://github.com/hyodotdev/openiap) release artifacts. Never edit this file by hand. When the schema changes or you need to pull newer types:
 
 - Run `bun run generate:types` to download the latest pinned release and overwrite `src/types.ts`.
 - To target a specific release, pass the tag: `bun run generate:types --tag <version>`.
