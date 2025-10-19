@@ -6,7 +6,10 @@ import {
 } from 'expo/config-plugins';
 import * as fs from 'fs';
 import * as path from 'path';
-import type {IOSAlternativeBillingConfig} from './withIAP';
+import {
+  withIosAlternativeBilling,
+  type IOSAlternativeBillingConfig,
+} from './withIosAlternativeBilling';
 
 /**
  * Plugin to add local OpenIAP pod dependency for development
@@ -14,17 +17,28 @@ import type {IOSAlternativeBillingConfig} from './withIAP';
  */
 type LocalPathOption = string | {ios?: string; android?: string};
 
+// Log a message only once per Node process
+const logOnce = (() => {
+  const printed = new Set<string>();
+  return (msg: string) => {
+    if (!printed.has(msg)) {
+      console.log(msg);
+      printed.add(msg);
+    }
+  };
+})();
+
 const withLocalOpenIAP: ConfigPlugin<
   {
     localPath?: LocalPathOption;
     iosAlternativeBilling?: IOSAlternativeBillingConfig;
+    horizonAppId?: string;
+    /** Resolved from modules.horizon by withIAP */
+    isHorizonEnabled?: boolean;
   } | void
 > = (config, props) => {
   // Import and apply iOS alternative billing configuration if provided
   if (props?.iosAlternativeBilling) {
-    // Import withIosAlternativeBilling from withIAP module
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const {withIosAlternativeBilling} = require('./withIAP');
     config = withIosAlternativeBilling(config, props.iosAlternativeBilling);
   }
   // Helper to resolve Android module path
@@ -71,7 +85,7 @@ const withLocalOpenIAP: ConfigPlugin<
       let podfileContent = fs.readFileSync(podfilePath, 'utf8');
 
       if (podfileContent.includes("pod 'openiap',")) {
-        console.log('✅ Local OpenIAP pod already configured');
+        logOnce('✅ Local OpenIAP pod already configured');
         return config;
       }
 
@@ -86,7 +100,7 @@ const withLocalOpenIAP: ConfigPlugin<
   pod 'openiap', :path => '${iosPath}'`;
         });
         fs.writeFileSync(podfilePath, podfileContent);
-        console.log(`✅ Added local OpenIAP pod at: ${iosPath}`);
+        logOnce(`✅ Added local OpenIAP pod at: ${iosPath}`);
       } else {
         console.warn('⚠️  Could not find target block in Podfile');
       }
@@ -185,14 +199,14 @@ const withLocalOpenIAP: ConfigPlugin<
     if (!contents.includes(includeLine)) contents += `\n${includeLine}\n`;
     if (!contents.includes(projectDirLine)) contents += `${projectDirLine}\n`;
     settings.contents = contents;
-    console.log(`✅ Linked local Android module at: ${androidModulePath}`);
+    logOnce(`✅ Linked local Android module at: ${androidModulePath}`);
     return config;
   });
 
   // 2) app/build.gradle: add implementation project(':openiap-google')
   config = withAppBuildGradle(config, (config) => {
-    const raw = props?.localPath;
     const projectRoot = (config.modRequest as any).projectRoot as string;
+    const raw = props?.localPath;
     const androidInput = typeof raw === 'string' ? undefined : raw?.android;
     const androidModulePath =
       resolveAndroidModulePath(androidInput) ||
@@ -205,84 +219,83 @@ const withLocalOpenIAP: ConfigPlugin<
 
     const gradle = config.modResults;
     const dependencyLine = `    implementation project(':openiap-google')`;
+    const flavor = props?.isHorizonEnabled ? 'horizon' : 'play';
+    const strategyLine = `        missingDimensionStrategy "platform", "${flavor}"`;
 
-    // Remove any previously added Maven deps for openiap-google to avoid duplicate classes
-    const removalPatterns = [
-      // Groovy DSL: implementation "io.github.hyochan.openiap:openiap-google:x.y.z" or api "..."
-      /^\s*(?:implementation|api)\s+["']io\.github\.hyochan\.openiap:openiap-google:[^"']+["']\s*$/gm,
-      // Kotlin DSL: implementation("io.github.hyochan.openiap:openiap-google:x.y.z") or api("...")
-      /^\s*(?:implementation|api)\s*\(\s*["']io\.github\.hyochan\.openiap:openiap-google:[^"']+["']\s*\)\s*$/gm,
-    ];
     let contents = gradle.contents;
-    let removedAny = false;
-    for (const pattern of removalPatterns) {
-      if (pattern.test(contents)) {
-        contents = contents.replace(pattern, '\n');
-        removedAny = true;
-      }
+
+    // Remove Maven deps (avoid duplicate classes with local module)
+    const mavenPattern =
+      /^\s*(?:implementation|api)\s*\(?\s*["']io\.github\.hyochan\.openiap:openiap-google:[^"']+["']\s*\)?\s*$/gm;
+    if (mavenPattern.test(contents)) {
+      contents = contents.replace(mavenPattern, '\n');
+      logOnce('🧹 Removed Maven openiap-google (using local module)');
     }
-    if (removedAny) {
-      gradle.contents = contents;
-      console.log(
-        '🧹 Removed Maven openiap-google to use local :openiap-google',
-      );
+
+    // Add missingDimensionStrategy (required for flavored module)
+    // Remove any existing platform strategies first to avoid duplicates
+    const strategyPattern =
+      /^\s*missingDimensionStrategy\s*\(?\s*["']platform["']\s*,\s*["'](play|horizon)["']\s*\)?\s*$/gm;
+    if (strategyPattern.test(contents)) {
+      contents = contents.replace(strategyPattern, '');
+      logOnce('🧹 Removed existing missingDimensionStrategy for platform');
     }
-    if (!gradle.contents.includes(dependencyLine)) {
-      const anchor = /dependencies\s*\{/m;
-      if (anchor.test(gradle.contents)) {
-        gradle.contents = gradle.contents.replace(
-          anchor,
-          (m) => `${m}\n${dependencyLine}`,
+
+    if (!contents.includes(strategyLine)) {
+      const lines = contents.split('\n');
+      const idx = lines.findIndex((line) => line.match(/defaultConfig\s*\{/));
+      if (idx !== -1) {
+        lines.splice(idx + 1, 0, strategyLine);
+        contents = lines.join('\n');
+        logOnce(
+          `🛠️ expo-iap: Added missingDimensionStrategy for ${flavor} flavor`,
         );
-      } else {
-        gradle.contents += `\n\ndependencies {\n${dependencyLine}\n}\n`;
       }
-      console.log('🛠️ Added dependency on local :openiap-google project');
     }
+
+    // Add project dependency
+    if (!contents.includes(dependencyLine)) {
+      const anchor = /dependencies\s*\{/m;
+      if (anchor.test(contents)) {
+        contents = contents.replace(anchor, (m) => `${m}\n${dependencyLine}`);
+      } else {
+        contents += `\n\ndependencies {\n${dependencyLine}\n}\n`;
+      }
+      logOnce('🛠️ Added dependency on local :openiap-google project');
+    }
+
+    gradle.contents = contents;
     return config;
   });
 
-  // 3) Ensure final cleanup in app/build.gradle after all mods are applied
+  // 3) Set horizonEnabled in gradle.properties
   config = withDangerousMod(config, [
     'android',
     async (config) => {
-      try {
-        const {platformProjectRoot} = config.modRequest as any;
-        const appBuildGradle = path.join(
-          platformProjectRoot,
-          'app',
-          'build.gradle',
+      const {platformProjectRoot} = config.modRequest as any;
+      const gradlePropertiesPath = path.join(
+        platformProjectRoot,
+        'gradle.properties',
+      );
+
+      if (fs.existsSync(gradlePropertiesPath)) {
+        let contents = fs.readFileSync(gradlePropertiesPath, 'utf8');
+        const isHorizon = props?.isHorizonEnabled ?? false;
+
+        // Update horizonEnabled property
+        contents = contents.replace(/^horizonEnabled=.*$/gm, '');
+        if (!contents.endsWith('\n')) contents += '\n';
+        contents += `horizonEnabled=${isHorizon}\n`;
+
+        fs.writeFileSync(gradlePropertiesPath, contents);
+        logOnce(
+          `🛠️ expo-iap: Set horizonEnabled=${isHorizon} in gradle.properties`,
         );
-        if (fs.existsSync(appBuildGradle)) {
-          let contents = fs.readFileSync(appBuildGradle, 'utf8');
-          const patterns = [
-            // Groovy DSL
-            /^\s*(?:implementation|api)\s+["']io\.github\.hyochan\.openiap:openiap-google:[^"']+["']\s*$/gm,
-            // Kotlin DSL
-            /^\s*(?:implementation|api)\s*\(\s*["']io\.github\.hyochan\.openiap:openiap-google:[^"']+["']\s*\)\s*$/gm,
-          ];
-          let changed = false;
-          for (const p of patterns) {
-            if (p.test(contents)) {
-              contents = contents.replace(p, '\n');
-              changed = true;
-            }
-          }
-          if (changed) {
-            fs.writeFileSync(appBuildGradle, contents);
-            console.log(
-              '🧹 expo-iap: Cleaned Maven openiap-google for local :openiap-google',
-            );
-          }
-        }
-      } catch (e) {
-        console.warn('expo-iap: cleanup step failed:', e);
       }
+
       return config;
     },
   ]);
-
-  // (removed) Avoid global root build.gradle mutations; included module should manage its plugins
 
   return config;
 };

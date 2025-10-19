@@ -5,12 +5,14 @@ import {
   withAndroidManifest,
   withAppBuildGradle,
   withDangerousMod,
-  withEntitlementsPlist,
-  withInfoPlist,
 } from 'expo/config-plugins';
 import * as fs from 'fs';
 import * as path from 'path';
 import withLocalOpenIAP from './withLocalOpenIAP';
+import {
+  withIosAlternativeBilling,
+  type IOSAlternativeBillingConfig,
+} from './withIosAlternativeBilling';
 
 const pkg = require('../../package.json');
 const openiapVersions = JSON.parse(
@@ -55,8 +57,12 @@ const addLineToGradle = (
 const modifyAppBuildGradle = (
   gradle: string,
   language: 'groovy' | 'kotlin',
+  isHorizonEnabled?: boolean,
 ): string => {
   let modified = gradle;
+
+  // Determine which flavor to use based on isHorizonEnabled
+  const flavor = isHorizonEnabled ? 'horizon' : 'play';
 
   // Ensure OpenIAP dependency exists at desired version in app-level build.gradle(.kts)
   const impl = (ga: string, v: string) =>
@@ -91,26 +97,65 @@ const modifyAppBuildGradle = (
     );
   }
 
+  // Add flavor dimension and default config for OpenIAP if horizon is enabled
+  if (isHorizonEnabled) {
+    // Add missingDimensionStrategy to select horizon flavor
+    const defaultConfigRegex = /defaultConfig\s*{/;
+    if (defaultConfigRegex.test(modified)) {
+      const strategyLine =
+        language === 'kotlin'
+          ? `        missingDimensionStrategy("platform", "${flavor}")`
+          : `        missingDimensionStrategy "platform", "${flavor}"`;
+
+      // Remove any existing platform strategies first to avoid duplicates
+      const strategyPattern =
+        /^\s*missingDimensionStrategy\s*\(?\s*["']platform["']\s*,\s*["'](play|horizon)["']\s*\)?\s*$/gm;
+      if (strategyPattern.test(modified)) {
+        modified = modified.replace(strategyPattern, '');
+        logOnce('🧹 Removed existing missingDimensionStrategy for platform');
+      }
+
+      // Add the new strategy
+      if (!/missingDimensionStrategy.*platform/.test(modified)) {
+        modified = addLineToGradle(
+          modified,
+          defaultConfigRegex,
+          strategyLine,
+          1,
+        );
+        logOnce(
+          `🛠️ expo-iap: Added missingDimensionStrategy for ${flavor} flavor`,
+        );
+      }
+    }
+  }
+
   return modified;
 };
 
-const withIapAndroid: ConfigPlugin<{addDeps?: boolean} | void> = (
-  config,
-  props,
-) => {
+const withIapAndroid: ConfigPlugin<
+  {
+    addDeps?: boolean;
+    horizonAppId?: string;
+    isHorizonEnabled?: boolean;
+  } | void
+> = (config, props) => {
   const addDeps = props?.addDeps ?? true;
 
+  // Add dependencies if needed (only when not using local module)
   if (addDeps) {
     config = withAppBuildGradle(config, (config) => {
-      // language provided by config-plugins: 'groovy' | 'kotlin'
       const language = (config.modResults as any).language || 'groovy';
       config.modResults.contents = modifyAppBuildGradle(
         config.modResults.contents,
         language,
+        props?.isHorizonEnabled,
       );
       return config;
     });
   }
+
+  // Note: missingDimensionStrategy for local dev is handled in withLocalOpenIAP
 
   config = withAndroidManifest(config, (config) => {
     const manifest = config.modResults;
@@ -133,121 +178,45 @@ const withIapAndroid: ConfigPlugin<{addDeps?: boolean} | void> = (
       );
     }
 
-    return config;
-  });
+    // Add Meta Horizon App ID if provided
+    if (props?.horizonAppId) {
+      if (
+        !manifest.manifest.application ||
+        manifest.manifest.application.length === 0
+      ) {
+        manifest.manifest.application = [
+          {$: {'android:name': '.MainApplication'}},
+        ];
+      }
 
-  return config;
-};
+      const application = manifest.manifest.application![0];
+      if (!application['meta-data']) {
+        application['meta-data'] = [];
+      }
 
-export interface IOSAlternativeBillingConfig {
-  /** Country codes where external purchases are supported (ISO 3166-1 alpha-2) */
-  countries?: string[];
-  /** External purchase URLs per country (iOS 15.4+) */
-  links?: Record<string, string>;
-  /** Multiple external purchase URLs per country (iOS 17.5+, up to 5 per country) */
-  multiLinks?: Record<string, string[]>;
-  /** Custom link regions (iOS 18.1+) */
-  customLinkRegions?: string[];
-  /** Streaming link regions for music apps (iOS 18.2+) */
-  streamingLinkRegions?: string[];
-  /** Enable external purchase link entitlement */
-  enableExternalPurchaseLink?: boolean;
-  /** Enable external purchase link streaming entitlement (music apps only) */
-  enableExternalPurchaseLinkStreaming?: boolean;
-}
+      const metaData = application['meta-data'];
+      const horizonAppIdMeta = {
+        $: {
+          'android:name': 'com.oculus.vr.APP_ID',
+          'android:value': props.horizonAppId,
+        },
+      };
 
-/** Add external purchase entitlements and Info.plist configuration */
-const withIosAlternativeBilling: ConfigPlugin<
-  IOSAlternativeBillingConfig | undefined
-> = (config, options) => {
-  if (!options || !options.countries || options.countries.length === 0) {
-    return config;
-  }
-
-  // Add entitlements
-  config = withEntitlementsPlist(config, (config) => {
-    // Always add basic external purchase entitlement when countries are specified
-    config.modResults['com.apple.developer.storekit.external-purchase'] = true;
-    logOnce(
-      '✅ Added com.apple.developer.storekit.external-purchase to entitlements',
-    );
-
-    // Add external purchase link entitlement if enabled
-    if (options.enableExternalPurchaseLink) {
-      config.modResults['com.apple.developer.storekit.external-purchase-link'] =
-        true;
-      logOnce(
-        '✅ Added com.apple.developer.storekit.external-purchase-link to entitlements',
+      const existingIndex = metaData.findIndex(
+        (m) => m.$['android:name'] === 'com.oculus.vr.APP_ID',
       );
-    }
 
-    // Add streaming entitlement if enabled
-    if (options.enableExternalPurchaseLinkStreaming) {
-      config.modResults[
-        'com.apple.developer.storekit.external-purchase-link-streaming'
-      ] = true;
-      logOnce(
-        '✅ Added com.apple.developer.storekit.external-purchase-link-streaming to entitlements',
-      );
-    }
-
-    return config;
-  });
-
-  // Add Info.plist configuration
-  config = withInfoPlist(config, (config) => {
-    const plist = config.modResults;
-
-    // 1. SKExternalPurchase (Required)
-    plist.SKExternalPurchase = options.countries;
-    logOnce(
-      `✅ Added SKExternalPurchase with countries: ${options.countries?.join(
-        ', ',
-      )}`,
-    );
-
-    // 2. SKExternalPurchaseLink (Optional - iOS 15.4+)
-    if (options.links && Object.keys(options.links).length > 0) {
-      plist.SKExternalPurchaseLink = options.links;
-      logOnce(
-        `✅ Added SKExternalPurchaseLink for ${
-          Object.keys(options.links).length
-        } countries`,
-      );
-    }
-
-    // 3. SKExternalPurchaseMultiLink (iOS 17.5+)
-    if (options.multiLinks && Object.keys(options.multiLinks).length > 0) {
-      plist.SKExternalPurchaseMultiLink = options.multiLinks;
-      logOnce(
-        `✅ Added SKExternalPurchaseMultiLink for ${
-          Object.keys(options.multiLinks).length
-        } countries`,
-      );
-    }
-
-    // 4. SKExternalPurchaseCustomLinkRegions (iOS 18.1+)
-    if (options.customLinkRegions && options.customLinkRegions.length > 0) {
-      plist.SKExternalPurchaseCustomLinkRegions = options.customLinkRegions;
-      logOnce(
-        `✅ Added SKExternalPurchaseCustomLinkRegions: ${options.customLinkRegions.join(
-          ', ',
-        )}`,
-      );
-    }
-
-    // 5. SKExternalPurchaseLinkStreamingRegions (iOS 18.2+)
-    if (
-      options.streamingLinkRegions &&
-      options.streamingLinkRegions.length > 0
-    ) {
-      plist.SKExternalPurchaseLinkStreamingRegions =
-        options.streamingLinkRegions;
-      logOnce(
-        `✅ Added SKExternalPurchaseLinkStreamingRegions: ${options.streamingLinkRegions.join(
-          ', ',
-        )}`,
-      );
+      if (existingIndex !== -1) {
+        metaData[existingIndex] = horizonAppIdMeta;
+        logOnce(
+          `✅ Updated com.oculus.vr.APP_ID to ${props.horizonAppId} in AndroidManifest.xml`,
+        );
+      } else {
+        metaData.push(horizonAppIdMeta);
+        logOnce(
+          `✅ Added com.oculus.vr.APP_ID: ${props.horizonAppId} to AndroidManifest.xml`,
+        );
+      }
     }
 
     return config;
@@ -310,12 +279,47 @@ export interface ExpoIapPluginOptions {
   /** Enable local development mode */
   enableLocalDev?: boolean;
   /**
-   * iOS Alternative Billing configuration.
-   * Configure external purchase countries, links, and entitlements.
-   * Requires approval from Apple.
+   * Optional modules configuration
+   */
+  modules?: {
+    /**
+     * Onside module for iOS alternative billing (Korea market)
+     * @platform ios
+     */
+    onside?: boolean;
+    /**
+     * Horizon module for Meta Quest/VR devices
+     * @platform android
+     */
+    horizon?: boolean;
+  };
+  /**
+   * iOS-specific configuration
    * @platform ios
    */
+  ios?: {
+    /**
+     * iOS Alternative Billing configuration.
+     * Configure external purchase countries, links, and entitlements.
+     * Requires approval from Apple.
+     */
+    alternativeBilling?: IOSAlternativeBillingConfig;
+  };
+  /**
+   * Android-specific configuration
+   * @platform android
+   */
+  android?: {
+    /**
+     * Meta Horizon App ID for Quest/VR devices.
+     * Required when modules.horizon is true.
+     */
+    horizonAppId?: string;
+  };
+  /** @deprecated Use ios.alternativeBilling instead */
   iosAlternativeBilling?: IOSAlternativeBillingConfig;
+  /** @deprecated Use android.horizonAppId instead */
+  horizonAppId?: string;
 }
 
 const withIap: ConfigPlugin<ExpoIapPluginOptions | void> = (
@@ -323,10 +327,26 @@ const withIap: ConfigPlugin<ExpoIapPluginOptions | void> = (
   options,
 ) => {
   try {
+    // Read Horizon configuration from modules
+    const isHorizonEnabled = options?.modules?.horizon ?? false;
+
+    const horizonAppId =
+      options?.android?.horizonAppId ?? options?.horizonAppId;
+    const iosAlternativeBilling =
+      options?.ios?.alternativeBilling ?? options?.iosAlternativeBilling;
+
+    logOnce(
+      `🔍 [expo-iap] Config values: horizonAppId=${horizonAppId}, isHorizonEnabled=${isHorizonEnabled}`,
+    );
+
     // Respect explicit flag; fall back to presence of localPath only when flag is unset
     const isLocalDev = options?.enableLocalDev ?? !!options?.localPath;
     // Apply Android modifications (skip adding deps when linking local module)
-    let result = withIapAndroid(config, {addDeps: !isLocalDev});
+    let result = withIapAndroid(config, {
+      addDeps: !isLocalDev,
+      horizonAppId,
+      isHorizonEnabled,
+    });
 
     // iOS: choose one path to avoid overlap
     if (isLocalDev) {
@@ -354,12 +374,14 @@ const withIap: ConfigPlugin<ExpoIapPluginOptions | void> = (
         logOnce(`🔧 [expo-iap] Enabling local OpenIAP: ${preview}`);
         result = withLocalOpenIAP(result, {
           localPath: resolved,
-          iosAlternativeBilling: options?.iosAlternativeBilling,
+          iosAlternativeBilling,
+          horizonAppId,
+          isHorizonEnabled, // Resolved from modules.horizon (line 467)
         });
       }
     } else {
       // Ensure iOS Podfile is set up to resolve public CocoaPods specs
-      result = withIapIOS(result, options?.iosAlternativeBilling);
+      result = withIapIOS(result, iosAlternativeBilling);
       logOnce('📦 [expo-iap] Using OpenIAP from CocoaPods');
     }
 
