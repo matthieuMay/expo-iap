@@ -97,7 +97,7 @@ class ExpoIapModule : Module() {
 
                             // Parse config from Map to InitConnectionConfig
                             val parsedConfig = config?.let { InitConnectionConfig.fromJson(it) }
-                            val ok = openIap.initConnection(parsedConfig)
+                            val ok = openIap.initConnection.invoke(parsedConfig)
 
                             if (!ok) {
                                 // Clear any buffered events from a failed init

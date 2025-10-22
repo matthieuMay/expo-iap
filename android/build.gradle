@@ -81,9 +81,16 @@ android {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7"
+
+    // Determine which OpenIAP dependency to use based on horizonEnabled flag
+    def horizonEnabled = project.findProperty('horizonEnabled')?.toBoolean() ?: false
+
     // Use OpenIAP Google module only; avoid direct BillingClient dependency
     if (findProject(":openiap-google") != null) {
       implementation project(":openiap-google")
+    } else if (horizonEnabled) {
+      // Use openiap-google-horizon for Meta Quest when horizonEnabled is true
+      implementation "io.github.hyochan.openiap:openiap-google-horizon:${googleVersionString}"
     } else {
       // Fallback to published artifact when local project isn't linked
       implementation "io.github.hyochan.openiap:openiap-google:${googleVersionString}"

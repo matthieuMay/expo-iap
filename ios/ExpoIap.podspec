@@ -22,7 +22,8 @@ Pod::Spec.new do |s|
   s.static_framework = true
 
   s.dependency 'ExpoModulesCore'
-  s.dependency 'openiap', versions['apple']
+  # Use ~> to allow patch updates (e.g., 1.2.30 -> 1.2.31, but not 1.3.0)
+  s.dependency 'openiap', "~> #{versions['apple']}"
 
   # Swift/Objective-C compatibility
   s.pod_target_xcconfig = {
