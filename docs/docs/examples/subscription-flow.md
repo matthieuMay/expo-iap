@@ -412,11 +412,11 @@ async function handleAndroidSubscriptionChange(
           subscriptionOffers,
           // IMPORTANT: Include purchase token for subscription replacement
           purchaseTokenAndroid: currentPurchase.purchaseToken,
-          // Optional: Specify proration mode
+          // Optional: Specify replacement mode
           replacementModeAndroid:
             changeType === 'upgrade'
-              ? 'IMMEDIATE_WITH_TIME_PRORATION'
-              : 'DEFERRED', // Downgrade happens at next renewal
+              ? 1 // WITH_TIME_PRORATION - immediate with prorated credit
+              : 6, // DEFERRED - change at next renewal
         },
       },
       type: 'subs',
@@ -500,11 +500,13 @@ function AndroidSubscriptionManager() {
 
 ### Android Replacement Modes
 
-- `0` (WITH_TIME_PRORATION): Immediate change with prorated credit
-- `1` (CHARGE_FULL_PRICE): Immediate change, charge full price
-- `2` (WITHOUT_PRORATION): Immediate change, no proration
-- `3` (CHARGE_PRORATED_PRICE): Immediate change with prorated charge
-- `5` (DEFERRED): Change takes effect at next renewal
+These constants match [Android's BillingFlowParams.SubscriptionUpdateParams.ReplacementMode](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.SubscriptionUpdateParams.ReplacementMode):
+
+- `1` (WITH_TIME_PRORATION): Immediate change with prorated credit (default)
+- `2` (CHARGE_PRORATED_PRICE): Immediate change with prorated charge (upgrade only)
+- `3` (WITHOUT_PRORATION): Immediate change, no proration
+- `5` (CHARGE_FULL_PRICE): Immediate change, charge full price
+- `6` (DEFERRED): Change takes effect at next renewal
 
 ## 5. Platform-Unified Subscription Change Handler
 
