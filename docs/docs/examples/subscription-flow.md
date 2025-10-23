@@ -502,11 +502,17 @@ function AndroidSubscriptionManager() {
 
 These constants match [Android's BillingFlowParams.SubscriptionUpdateParams.ReplacementMode](https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.SubscriptionUpdateParams.ReplacementMode):
 
-- `1` (WITH_TIME_PRORATION): Immediate change with prorated credit (default)
+- `1` (WITH_TIME_PRORATION): Immediate change with prorated credit
 - `2` (CHARGE_PRORATED_PRICE): Immediate change with prorated charge (upgrade only)
 - `3` (WITHOUT_PRORATION): Immediate change, no proration
 - `5` (CHARGE_FULL_PRICE): Immediate change, charge full price
 - `6` (DEFERRED): Change takes effect at next renewal
+
+**Important Notes:**
+
+- If you don't specify `replacementModeAndroid`, the system uses the default replacement mode configured in your Google Play Console subscription settings.
+
+- **DEFERRED mode behavior**: When using `DEFERRED` mode (6), the subscription change request succeeds immediately, but the actual subscription change won't take effect until the next renewal period. The purchase callback will complete successfully with an empty purchase list - this is expected behavior, not an error.
 
 ## 5. Platform-Unified Subscription Change Handler
 
