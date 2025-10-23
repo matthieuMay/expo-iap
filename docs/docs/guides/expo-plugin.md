@@ -33,8 +33,8 @@ Set `enableLocalDev` to `true` to enable this feature. `localPath` should point 
         {
           "enableLocalDev": true,
           "localPath": {
-            "ios": "../path/to/your/openiap-apple",
-            "android": "../path/to/your/openiap-google"
+            "ios": "../path/to/your/openiap/packages/apple",
+            "android": "../path/to/your/openiap/packages/google"
           }
         }
       ]
