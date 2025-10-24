@@ -195,26 +195,29 @@ const withIapAndroid: ConfigPlugin<
       }
 
       const metaData = application['meta-data'];
+
+      // Use the correct meta-data name for Horizon Platform SDK
+      const horizonMetaDataName = 'com.meta.horizon.platform.ovr.OCULUS_APP_ID';
       const horizonAppIdMeta = {
         $: {
-          'android:name': 'com.oculus.vr.APP_ID',
+          'android:name': horizonMetaDataName,
           'android:value': props.horizonAppId,
         },
       };
 
       const existingIndex = metaData.findIndex(
-        (m) => m.$['android:name'] === 'com.oculus.vr.APP_ID',
+        (m) => m.$['android:name'] === horizonMetaDataName,
       );
 
       if (existingIndex !== -1) {
         metaData[existingIndex] = horizonAppIdMeta;
         logOnce(
-          `✅ Updated com.oculus.vr.APP_ID to ${props.horizonAppId} in AndroidManifest.xml`,
+          `✅ Updated ${horizonMetaDataName} to ${props.horizonAppId} in AndroidManifest.xml`,
         );
       } else {
         metaData.push(horizonAppIdMeta);
         logOnce(
-          `✅ Added com.oculus.vr.APP_ID: ${props.horizonAppId} to AndroidManifest.xml`,
+          `✅ Added ${horizonMetaDataName}: ${props.horizonAppId} to AndroidManifest.xml`,
         );
       }
     }
