@@ -61,7 +61,7 @@ const withLocalOpenIAP: ConfigPlugin<
     return null;
   };
 
-  // iOS: inject local pod path
+  // iOS: inject local pod path with wrapper podspec
   config = withDangerousMod(config, [
     'ios',
     async (config) => {
@@ -82,8 +82,12 @@ const withLocalOpenIAP: ConfigPlugin<
         console.warn(`⚠️  Podfile not found at ${podfilePath}. Skipping.`);
         return config;
       }
+
+      logOnce(`✅ Using local OpenIAP from: ${iosPath}`);
+
       let podfileContent = fs.readFileSync(podfilePath, 'utf8');
 
+      // Check if local OpenIAP pod is already configured
       if (podfileContent.includes("pod 'openiap',")) {
         logOnce('✅ Local OpenIAP pod already configured');
         return config;
@@ -91,13 +95,16 @@ const withLocalOpenIAP: ConfigPlugin<
 
       const targetRegex =
         /target\s+['"][\w]+['"]\s+do\s*\n\s*use_expo_modules!/;
+      const relativePath = path
+        .relative(platformProjectRoot, iosPath)
+        .replace(/\\/g, '/');
 
       if (targetRegex.test(podfileContent)) {
         podfileContent = podfileContent.replace(targetRegex, (match) => {
           return `${match}
-  
+
   # Local OpenIAP pod for development (added by expo-iap plugin)
-  pod 'openiap', :path => '${iosPath}'`;
+  pod 'openiap', :path => '${relativePath}'`;
         });
         fs.writeFileSync(podfilePath, podfileContent);
         logOnce(`✅ Added local OpenIAP pod at: ${iosPath}`);
@@ -224,12 +231,15 @@ const withLocalOpenIAP: ConfigPlugin<
 
     let contents = gradle.contents;
 
-    // Remove Maven deps (avoid duplicate classes with local module)
+    // Remove Maven deps (both openiap-google and openiap-google-horizon)
+    // to avoid duplicate classes with local module
     const mavenPattern =
-      /^\s*(?:implementation|api)\s*\(?\s*["']io\.github\.hyochan\.openiap:openiap-google:[^"']+["']\s*\)?\s*$/gm;
+      /^\s*(?:implementation|api)\s*\(?\s*["']io\.github\.hyochan\.openiap:openiap-google(?:-horizon)?:[^"']+["']\s*\)?\s*$/gm;
     if (mavenPattern.test(contents)) {
       contents = contents.replace(mavenPattern, '\n');
-      logOnce('🧹 Removed Maven openiap-google (using local module)');
+      logOnce(
+        '🧹 Removed Maven openiap-google* dependencies (using local module)',
+      );
     }
 
     // Add missingDimensionStrategy (required for flavored module)
