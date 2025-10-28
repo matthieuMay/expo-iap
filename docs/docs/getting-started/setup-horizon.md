@@ -259,4 +259,3 @@ cd android && ./gradlew :expo-iap:dependencies --configuration debugRuntimeClass
 - [Review the installation guide](./installation)
 - [Explore core methods](../api/methods/core-methods)
 - [Understand error codes](../api/error-codes)
-- [Read the Horizon OS migration guide](../guides/horizon-migration)
