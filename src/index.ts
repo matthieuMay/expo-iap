@@ -126,7 +126,7 @@ const normalizePurchasePlatform = (purchase: Purchase): Purchase => {
     return purchase;
   }
 
-  return {...purchase, platform: lowered};
+  return {...purchase, platform: lowered} as Purchase;
 };
 
 const normalizePurchaseArray = (purchases: Purchase[]): Purchase[] =>

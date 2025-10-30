@@ -195,7 +195,8 @@ export function useIAP(options?: UseIAPOptions): UseIap {
       purchaseToken: purchase.purchaseToken ?? null,
       quantity: purchase.quantity,
       transactionDate: purchase.transactionDate,
-    }),
+      transactionId: purchase.transactionId,
+    }) as PurchaseInput,
     [],
   );
 
