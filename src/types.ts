@@ -310,7 +310,7 @@ export interface ProductAndroid extends ProductCommon {
   id: string;
   nameAndroid: string;
   oneTimePurchaseOfferDetailsAndroid?: (ProductAndroidOneTimePurchaseOfferDetail | null);
-  platform: IapPlatform;
+  platform: 'android';
   price?: (number | null);
   subscriptionOfferDetailsAndroid?: (ProductSubscriptionAndroidOfferDetails[] | null);
   title: string;
@@ -346,7 +346,7 @@ export interface ProductIOS extends ProductCommon {
   id: string;
   isFamilyShareableIOS: boolean;
   jsonRepresentationIOS: string;
-  platform: IapPlatform;
+  platform: 'ios';
   price?: (number | null);
   subscriptionInfoIOS?: (SubscriptionInfoIOS | null);
   title: string;
@@ -372,7 +372,7 @@ export interface ProductSubscriptionAndroid extends ProductCommon {
   id: string;
   nameAndroid: string;
   oneTimePurchaseOfferDetailsAndroid?: (ProductAndroidOneTimePurchaseOfferDetail | null);
-  platform: IapPlatform;
+  platform: 'android';
   price?: (number | null);
   subscriptionOfferDetailsAndroid: ProductSubscriptionAndroidOfferDetails[];
   title: string;
@@ -403,7 +403,7 @@ export interface ProductSubscriptionIOS extends ProductCommon {
   introductoryPriceSubscriptionPeriodIOS?: (SubscriptionPeriodIOS | null);
   isFamilyShareableIOS: boolean;
   jsonRepresentationIOS: string;
-  platform: IapPlatform;
+  platform: 'ios';
   price?: (number | null);
   subscriptionInfoIOS?: (SubscriptionInfoIOS | null);
   subscriptionPeriodNumberIOS?: (string | null);
@@ -431,7 +431,7 @@ export interface PurchaseAndroid extends PurchaseCommon {
   obfuscatedAccountIdAndroid?: (string | null);
   obfuscatedProfileIdAndroid?: (string | null);
   packageNameAndroid?: (string | null);
-  platform: IapPlatform;
+  platform: 'android';
   productId: string;
   purchaseState: PurchaseState;
   purchaseToken?: (string | null);
@@ -484,7 +484,7 @@ export interface PurchaseIOS extends PurchaseCommon {
   originalTransactionDateIOS?: (number | null);
   originalTransactionIdentifierIOS?: (string | null);
   ownershipTypeIOS?: (string | null);
-  platform: IapPlatform;
+  platform: 'ios';
   productId: string;
   purchaseState: PurchaseState;
   purchaseToken?: (string | null);
